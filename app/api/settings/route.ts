@@ -28,7 +28,16 @@ export async function PUT(req: Request) {
     const body = await req.json()
     const { name, email, currentPassword, newPassword } = body
 
-    const existingUser = await prisma.user.findUnique({ where: { id: session.user.id } })
+    const userId = session.user.id
+    const userEmail = session.user.email
+
+    let existingUser = null
+    if (userId) {
+      existingUser = await prisma.user.findUnique({ where: { id: userId } })
+    }
+    if (!existingUser && userEmail) {
+      existingUser = await prisma.user.findUnique({ where: { email: userEmail } })
+    }
     if (!existingUser) return NextResponse.json({ error: 'User not found' }, { status: 404 })
 
     const updateData: any = {}
@@ -48,14 +57,28 @@ export async function PUT(req: Request) {
       updateData.password = await bcrypt.hash(newPassword, 10)
     }
 
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json({ data: { id: existingUser.id, email: existingUser.email, name: existingUser.name, role: existingUser.role } })
+    }
+
     const updatedUser = await prisma.user.update({
       where: { id: session.user.id },
       data: updateData,
       select: { id: true, email: true, name: true, role: true }
     })
 
+    if (email && email !== existingUser.email) {
+      if (existingUser.guruId) {
+        await prisma.guru.update({ where: { id: existingUser.guruId }, data: { email } })
+      }
+      if (existingUser.siswaId) {
+        await prisma.siswa.update({ where: { id: existingUser.siswaId }, data: { no_hp: existingUser.siswaId } })
+      }
+    }
+
     return NextResponse.json({ data: updatedUser })
-  } catch {
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  } catch (error: any) {
+    console.error('PUT /api/settings:', error)
+    return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 })
   }
 }
