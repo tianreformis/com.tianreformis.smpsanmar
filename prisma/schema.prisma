@@ -43,7 +43,7 @@ model Siswa {
 // Guru/Teacher
 model Guru {
   id        String   @id @default(cuid())
-  nip       String   @unique
+  nip       String?  @unique
   nama      String
   email     String
   no_hp     String

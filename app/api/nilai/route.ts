@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { logActivity } from '@/lib/activity'
+import { formatZodErrors } from '@/lib/error-handler'
 
 export async function GET(req: Request) {
   try {
@@ -62,7 +63,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ data: nilai }, { status: 201 })
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.errors }, { status: 400 })
+      return NextResponse.json({ error: formatZodErrors(error) }, { status: 400 })
     }
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }

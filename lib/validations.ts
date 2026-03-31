@@ -1,37 +1,37 @@
 import { z } from 'zod'
 
 export const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(6)
+  email: z.string().email({ message: 'Email tidak valid' }),
+  password: z.string().min(6, { message: 'Password minimal 6 karakter' })
 })
 
 export const siswaSchema = z.object({
-  nisn: z.string().min(10).max(10),
-  nama: z.string().min(2),
+  nisn: z.string().min(10, { message: 'NISN harus 10 digit' }).max(10, { message: 'NISN harus 10 digit' }),
+  nama: z.string().min(2, { message: 'Nama minimal 2 karakter' }),
   jenis_kelamin: z.enum(['L', 'P']),
   tanggal_lahir: z.string(),
-  alamat: z.string().min(5),
-  no_hp: z.string().min(10),
+  alamat: z.string().min(5, { message: 'Alamat minimal 5 karakter' }),
+  no_hp: z.string().min(10, { message: 'No HP minimal 10 digit' }),
   kelasId: z.string().optional(),
   foto: z.string().optional()
 })
 
 export const guruSchema = z.object({
-  nip: z.string().min(10).max(18),
-  nama: z.string().min(2),
-  email: z.string().email(),
-  no_hp: z.string().min(10),
-  alamat: z.string().min(5),
+  nip: z.string().min(5, { message: 'NIP minimal 5 karakter' }).max(18, { message: 'NIP maksimal 18 karakter' }).optional().or(z.literal('')),
+  nama: z.string().min(2, { message: 'Nama minimal 2 karakter' }),
+  email: z.string().email({ message: 'Email tidak valid' }),
+  no_hp: z.string().min(10, { message: 'No HP minimal 10 digit' }),
+  alamat: z.string().min(5, { message: 'Alamat minimal 5 karakter' }),
   foto: z.string().optional()
 })
 
 export const kelasSchema = z.object({
-  nama_kelas: z.string().min(2),
+  nama_kelas: z.string().min(2, { message: 'Nama kelas minimal 2 karakter' }),
   waliKelasId: z.string().optional()
 })
 
 export const mapelSchema = z.object({
-  nama_mapel: z.string().min(2),
+  nama_mapel: z.string().min(2, { message: 'Nama mata pelajaran minimal 2 karakter' }),
   guruId: z.string().optional()
 })
 
@@ -47,30 +47,30 @@ export const jadwalSchema = z.object({
 export const nilaiSchema = z.object({
   siswaId: z.string(),
   mapelId: z.string(),
-  nilai: z.number().min(0).max(100),
+  nilai: z.number().min(0, { message: 'Nilai minimal 0' }).max(100, { message: 'Nilai maksimal 100' }),
   semester: z.string()
 })
 
 export const ppdbSchema = z.object({
-  nama: z.string().min(2),
-  nisn: z.string().min(10).max(10),
-  asal_sekolah: z.string().min(2),
-  alamat: z.string().min(5),
-  no_hp: z.string().min(10)
+  nama: z.string().min(2, { message: 'Nama minimal 2 karakter' }),
+  nisn: z.string().min(10, { message: 'NISN harus 10 digit' }).max(10, { message: 'NISN harus 10 digit' }),
+  asal_sekolah: z.string().min(2, { message: 'Asal sekolah minimal 2 karakter' }),
+  alamat: z.string().min(5, { message: 'Alamat minimal 5 karakter' }),
+  no_hp: z.string().min(10, { message: 'No HP minimal 10 digit' })
 })
 
 export const blogSchema = z.object({
-  title: z.string().min(3),
-  slug: z.string().min(3),
-  content: z.string().min(10),
+  title: z.string().min(3, { message: 'Judul minimal 3 karakter' }),
+  slug: z.string().min(3, { message: 'Slug minimal 3 karakter' }),
+  content: z.string().min(10, { message: 'Konten minimal 10 karakter' }),
   thumbnail: z.string().optional(),
   status: z.enum(['draft', 'publish'])
 })
 
 export const userSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(6),
-  name: z.string().min(2),
+  email: z.string().email({ message: 'Email tidak valid' }),
+  password: z.string().min(6, { message: 'Password minimal 6 karakter' }),
+  name: z.string().min(2, { message: 'Nama minimal 2 karakter' }),
   role: z.enum(['ADMIN', 'GURU', 'SISWA']),
   siswaId: z.string().optional(),
   guruId: z.string().optional()

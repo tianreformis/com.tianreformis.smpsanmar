@@ -4,6 +4,7 @@ import { guruSchema } from '@/lib/validations'
 import { z } from 'zod'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
+import { formatZodErrors } from '@/lib/error-handler'
 
 export async function GET(req: Request) {
   try {
@@ -38,13 +39,25 @@ export async function POST(req: Request) {
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const body = await req.json()
-    const data = guruSchema.parse(body)
+    const validated = guruSchema.parse(body)
+    const { nip, nama, email, no_hp, alamat, foto } = validated
 
-    const guru = await prisma.guru.create({ data })
+    const guru = await prisma.guru.create({
+      data: {
+        nama,
+        email,
+        no_hp,
+        alamat,
+        nip: nip || undefined,
+        foto: foto || undefined
+      } as any
+    })
     return NextResponse.json({ data: guru }, { status: 201 })
   } catch (error) {
     console.error('POST /api/guru:', error)
-    if (error instanceof z.ZodError) return NextResponse.json({ error: error.errors }, { status: 400 })
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ error: formatZodErrors(error) }, { status: 400 })
+    }
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

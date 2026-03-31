@@ -4,6 +4,7 @@ import { siswaSchema } from '@/lib/validations'
 import { z } from 'zod'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
+import { formatZodErrors } from '@/lib/error-handler'
 
 export async function GET(req: Request, { params }: { params: { id: string } }) {
   try {
@@ -43,7 +44,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     return NextResponse.json({ data: siswa })
   } catch (error: any) {
     console.error('PUT /api/siswa/[id]:', error)
-    if (error instanceof z.ZodError) return NextResponse.json({ error: error.errors }, { status: 400 })
+    if (error instanceof z.ZodError) return NextResponse.json({ error: formatZodErrors(error) }, { status: 400 })
     return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 })
   }
 }

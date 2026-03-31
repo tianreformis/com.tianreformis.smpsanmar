@@ -20,7 +20,7 @@ interface Guru {
 }
 
 interface FormData {
-  nip: string
+  nip?: string
   nama: string
   email: string
   no_hp: string
@@ -53,12 +53,13 @@ export default function GuruPage() {
     
     try {
       const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) })
+      const json = await res.json()
       if (res.ok) {
         toast.success(editingId ? 'Berhasil update' : 'Berhasil tambah')
         setIsModalOpen(false)
         resetForm()
         fetchData()
-      } else { toast.error('Gagal menyimpan') }
+      } else { toast.error(json.error?.[0]?.message || json.error || 'Gagal menyimpan') }
     } catch { toast.error('Terjadi kesalahan') }
   }
 
@@ -142,7 +143,7 @@ export default function GuruPage() {
           <DialogHeader><DialogTitle>{editingId ? 'Edit Guru' : 'Tambah Guru'}</DialogTitle></DialogHeader>
           <form onSubmit={handleSubmit}>
             <div className="grid gap-4 py-4">
-              <div className="space-y-2"><Label>NIP</Label><Input value={form.nip} onChange={(e) => setForm({ ...form, nip: e.target.value })} required /></div>
+              <div className="space-y-2"><Label>NIP <span className="text-muted-foreground font-normal">(opsional)</span></Label><Input value={form.nip} onChange={(e) => setForm({ ...form, nip: e.target.value })} /></div>
               <div className="space-y-2"><Label>Nama</Label><Input value={form.nama} onChange={(e) => setForm({ ...form, nama: e.target.value })} required /></div>
               <div className="space-y-2"><Label>Email</Label><Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required /></div>
               <div className="grid grid-cols-2 gap-4">

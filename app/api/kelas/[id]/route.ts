@@ -4,6 +4,7 @@ import { kelasSchema } from '@/lib/validations'
 import { z } from 'zod'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
+import { formatZodErrors } from '@/lib/error-handler'
 
 export async function GET(req: Request, { params }: { params: { id: string } }) {
   try {
@@ -39,7 +40,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     return NextResponse.json({ data: kelas })
   } catch (error) {
     console.error('PUT /api/kelas/[id]:', error)
-    if (error instanceof z.ZodError) return NextResponse.json({ error: error.errors }, { status: 400 })
+    if (error instanceof z.ZodError) return NextResponse.json({ error: formatZodErrors(error) }, { status: 400 })
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

@@ -73,12 +73,13 @@ export default function NilaiPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...form, nilai: parseFloat(form.nilai) })
       })
+      const json = await res.json()
       if (res.ok) {
         toast.success('Nilai berhasil disimpan')
         setIsModalOpen(false)
         setForm({ siswaId: '', mapelId: '', nilai: '', semester: '' })
         fetchData()
-      } else { toast.error('Gagal menyimpan') }
+      } else { toast.error(typeof json.error === 'string' ? json.error : 'Gagal menyimpan') }
     } catch { toast.error('Terjadi kesalahan') }
   }
 

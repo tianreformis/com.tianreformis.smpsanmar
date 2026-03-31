@@ -53,12 +53,13 @@ export default function KelasPage() {
     
     try {
       const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) })
+      const json = await res.json()
       if (res.ok) {
         toast.success(editingId ? 'Berhasil update' : 'Berhasil tambah')
         setIsModalOpen(false)
         resetForm()
         fetchData()
-      } else { toast.error('Gagal menyimpan') }
+      } else { toast.error(typeof json.error === 'string' ? json.error : 'Gagal menyimpan') }
     } catch { toast.error('Terjadi kesalahan') }
   }
 
