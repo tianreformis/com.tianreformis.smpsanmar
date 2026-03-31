@@ -48,8 +48,8 @@ export function DashboardSidebar({ role }: SidebarProps) {
   return (
     <aside className="fixed left-0 top-0 z-40 h-screen w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700">
       <div className="flex items-center gap-2 p-6 border-b border-gray-200 dark:border-gray-700">
-        <School className="h-8 w-8 text-primary" />
-        <span className="text-xl font-bold">SMS</span>
+        <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT8owQlf3ElVkVaUSYCJ4AJ4As4u2kb1Ks8rw&s" alt="Logo" className="h-8 w-8 rounded-full" />
+        <span className="text-lg font-bold">SMP Santa Maria</span>
       </div>
       
       <nav className="p-4 space-y-1">
