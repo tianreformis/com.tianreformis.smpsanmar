@@ -24,7 +24,7 @@ interface Siswa {
   tanggal_lahir: string
   alamat: string
   no_hp: string
-  kelas?: { nama_kelas: string }
+  kelas?: { id: string; nama_kelas: string } | null
 }
 
 interface Pagination {
@@ -65,9 +65,9 @@ export default function SiswaPage() {
     try {
       const res = await fetch(`/api/siswa?page=${pagination.page}&limit=${pagination.limit}&search=${search}`)
       const json = await res.json()
-      setData(json.data)
-      setPagination(json.pagination)
-    } catch { toast.error('Gagal mengambil data') }
+      setData(json.data || [])
+      setPagination(json.pagination || { total: 0, page: 1, limit: 10, totalPages: 0 })
+    } catch (e) { toast.error('Gagal mengambil data') }
     finally { setLoading(false) }
   }
 
@@ -75,8 +75,8 @@ export default function SiswaPage() {
     try {
       const res = await fetch('/api/kelas')
       const json = await res.json()
-      setKelas(json.data)
-    } catch { console.error('Error fetching kelas') }
+      setKelas(json.data || [])
+    } catch (e) { console.error('Error fetching kelas') }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -84,11 +84,21 @@ export default function SiswaPage() {
     const url = editingId ? `/api/siswa/${editingId}` : '/api/siswa'
     const method = editingId ? 'PUT' : 'POST'
     
+    const payload = {
+      nisn: form.nisn,
+      nama: form.nama,
+      jenis_kelamin: form.jenis_kelamin,
+      tanggal_lahir: form.tanggal_lahir,
+      alamat: form.alamat,
+      no_hp: form.no_hp,
+      kelasId: form.kelasId || null
+    }
+    
     try {
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, kelasId: form.kelasId || undefined })
+        body: JSON.stringify(payload)
       })
       const json = await res.json()
       if (res.ok) {
@@ -97,14 +107,15 @@ export default function SiswaPage() {
         resetForm()
         fetchData()
       } else {
-        toast.error(json.error || 'Gagal menyimpan')
+        const errMsg = typeof json.error === 'string' ? json.error : JSON.stringify(json.error)
+        toast.error(errMsg || 'Gagal menyimpan')
       }
     } catch (err: any) { toast.error(err.message || 'Terjadi kesalahan') }
   }
 
   const handleEdit = (siswa: Siswa) => {
     setEditingId(siswa.id)
-    const tgl = siswa.tanggal_lahir.includes('T') ? siswa.tanggal_lahir.split('T')[0] : siswa.tanggal_lahir
+    const tgl = siswa.tanggal_lahir.split('T')[0]
     setForm({
       nisn: siswa.nisn,
       nama: siswa.nama,
@@ -199,7 +210,9 @@ export default function SiswaPage() {
               <TableRow key={i}>
                 {[...Array(7)].map((_, j) => <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>)}
               </TableRow>
-            )) : data.map((siswa, i) => (
+            )) : data.length === 0 ? (
+              <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Tidak ada data</TableCell></TableRow>
+            ) : data.map((siswa, i) => (
               <TableRow key={siswa.id}>
                 <TableCell>{(pagination.page - 1) * pagination.limit + i + 1}</TableCell>
                 <TableCell className="font-mono">{siswa.nisn}</TableCell>
@@ -228,7 +241,7 @@ export default function SiswaPage() {
         </div>
       </div>
 
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+      <Dialog open={isModalOpen} onOpenChange={(open) => { if (!open) { setIsModalOpen(false); resetForm() } }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{editingId ? 'Edit Siswa' : 'Tambah Siswa'}</DialogTitle>
@@ -238,7 +251,7 @@ export default function SiswaPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>NISN</Label>
-                  <Input value={form.nisn} onChange={(e) => setForm({ ...form, nisn: e.target.value })} required />
+                  <Input value={form.nisn} onChange={(e) => setForm({ ...form, nisn: e.target.value })} required maxLength={10} />
                 </div>
                 <div className="space-y-2">
                   <Label>Jenis Kelamin</Label>
@@ -280,7 +293,7 @@ export default function SiswaPage() {
               </div>
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>Batal</Button>
+              <Button type="button" variant="outline" onClick={() => { setIsModalOpen(false); resetForm() }}>Batal</Button>
               <Button type="submit">{editingId ? 'Update' : 'Simpan'}</Button>
             </DialogFooter>
           </form>
