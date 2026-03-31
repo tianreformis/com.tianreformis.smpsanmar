@@ -1,0 +1,146 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// User for authentication
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String?
+  role      String   @default("SISWA")
+  siswaId   String?  @unique
+  siswa     Siswa?   @relation(fields: [siswaId], references: [id])
+  guruId    String?  @unique
+  guru      Guru?    @relation(fields: [guruId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Siswa/Student
+model Siswa {
+  id            String    @id @default(cuid())
+  nisn          String    @unique
+  nama          String
+  jenis_kelamin String
+  tanggal_lahir DateTime
+  alamat        String
+  no_hp         String
+  foto          String?
+  kelasId       String?
+  kelas         Kelas?    @relation(fields: [kelasId], references: [id])
+  nilai         Nilai[]
+  user          User?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+// Guru/Teacher
+model Guru {
+  id        String   @id @default(cuid())
+  nip       String   @unique
+  nama      String
+  email     String
+  no_hp     String
+  alamat    String
+  foto      String?
+  kelas     Kelas?   @relation("WaliKelas")
+  mapel     Mapel[]
+  jadwal    Jadwal[]
+  user      User?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Kelas/Class
+model Kelas {
+  id          String   @id @default(cuid())
+  nama_kelas  String   @unique
+  waliKelasId String?  @unique
+  waliKelas   Guru?    @relation("WaliKelas", fields: [waliKelasId], references: [id])
+  siswa       Siswa[]
+  jadwal      Jadwal[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// Mapel/Subject
+model Mapel {
+  id         String   @id @default(cuid())
+  nama_mapel String
+  guruId     String?
+  guru       Guru?    @relation(fields: [guruId], references: [id])
+  nilai      Nilai[]
+  jadwal     Jadwal[]
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+// Jadwal/Schedule
+model Jadwal {
+  id         String   @id @default(cuid())
+  kelasId    String
+  kelas      Kelas    @relation(fields: [kelasId], references: [id])
+  mapelId    String
+  mapel      Mapel    @relation(fields: [mapelId], references: [id])
+  guruId     String
+  guru       Guru     @relation(fields: [guruId], references: [id])
+  hari       String
+  jam_mulai  String
+  jam_selesai String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+// Nilai/Grade
+model Nilai {
+  id        String   @id @default(cuid())
+  siswaId   String
+  siswa     Siswa    @relation(fields: [siswaId], references: [id])
+  mapelId   String
+  mapel     Mapel    @relation(fields: [mapelId], references: [id])
+  nilai     Float
+  semester  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// PPDB (Penerimaan Siswa Baru)
+model PPDB {
+  id              String   @id @default(cuid())
+  no_pendaftaran String?
+  nama           String
+  nisn           String
+  asal_sekolah   String
+  alamat         String
+  no_hp          String
+  status         String   @default("pending")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+// BlogPost
+model BlogPost {
+  id         String   @id @default(cuid())
+  title      String
+  slug       String   @unique
+  content    String
+  thumbnail  String?
+  status     String   @default("draft")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+// ActivityLog
+model ActivityLog {
+  id        String   @id @default(cuid())
+  userId    String
+  action    String
+  details   String?
+  createdAt DateTime @default(now())
+}

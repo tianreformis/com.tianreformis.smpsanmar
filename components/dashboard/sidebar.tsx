@@ -1,0 +1,90 @@
+'use client'
+
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+import { cn } from '@/lib/utils'
+import { 
+  LayoutDashboard, Users, GraduationCap, BookOpen, 
+  Calendar, FileText, ClipboardList, Newspaper, 
+  Settings, LogOut, School
+} from 'lucide-react'
+import { signOut } from 'next-auth/react'
+
+interface SidebarProps {
+  role: string
+}
+
+const adminMenu = [
+  { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+  { href: '/dashboard/siswa', icon: GraduationCap, label: 'Siswa' },
+  { href: '/dashboard/guru', icon: Users, label: 'Guru' },
+  { href: '/dashboard/kelas', icon: School, label: 'Kelas' },
+  { href: '/dashboard/mapel', icon: BookOpen, label: 'Mapel' },
+  { href: '/dashboard/jadwal', icon: Calendar, label: 'Jadwal' },
+  { href: '/dashboard/nilai', icon: FileText, label: 'Nilai' },
+  { href: '/dashboard/ppdb', icon: ClipboardList, label: 'PPDB' },
+  { href: '/dashboard/blog', icon: Newspaper, label: 'Blog' },
+  { href: '/dashboard/settings', icon: Settings, label: 'Settings' },
+]
+
+const guruMenu = [
+  { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+  { href: '/dashboard/kelas', icon: School, label: 'Kelas' },
+  { href: '/dashboard/jadwal', icon: Calendar, label: 'Jadwal' },
+  { href: '/dashboard/nilai', icon: FileText, label: 'Input Nilai' },
+  { href: '/dashboard/settings', icon: Settings, label: 'Settings' },
+]
+
+const siswaMenu = [
+  { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+  { href: '/dashboard/nilai', icon: FileText, label: 'Nilai Saya' },
+  { href: '/dashboard/settings', icon: Settings, label: 'Settings' },
+]
+
+export function DashboardSidebar({ role }: SidebarProps) {
+  const pathname = usePathname()
+  const menu = role === 'ADMIN' ? adminMenu : role === 'GURU' ? guruMenu : siswaMenu
+
+  return (
+    <aside className="fixed left-0 top-0 z-40 h-screen w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700">
+      <div className="flex items-center gap-2 p-6 border-b border-gray-200 dark:border-gray-700">
+        <School className="h-8 w-8 text-primary" />
+        <span className="text-xl font-bold">SMS</span>
+      </div>
+      
+      <nav className="p-4 space-y-1">
+        {menu.map((item) => {
+          const Icon = item.icon
+          const isActive = pathname === item.href || 
+            (item.href !== '/dashboard' && pathname.startsWith(item.href))
+          
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                'flex items-center gap-3 px-4 py-2.5 rounded-lg transition-colors',
+                isActive 
+                  ? 'bg-primary text-white' 
+                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+              )}
+            >
+              <Icon className="h-5 w-5" />
+              <span>{item.label}</span>
+            </Link>
+          )
+        })}
+      </nav>
+      
+      <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 dark:border-gray-700">
+        <button
+          onClick={() => signOut({ callbackUrl: '/login' })}
+          className="flex items-center gap-3 px-4 py-2.5 w-full rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+        >
+          <LogOut className="h-5 w-5" />
+          <span>Logout</span>
+        </button>
+      </div>
+    </aside>
+  )
+}
