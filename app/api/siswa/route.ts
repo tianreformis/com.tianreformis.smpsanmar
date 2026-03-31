@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
+import bcrypt from 'bcryptjs'
 
 export async function GET(req: Request) {
   try {
@@ -38,11 +39,21 @@ export async function POST(req: Request) {
     const body = await req.json()
     const { kelasId, ...rest } = body
 
+    const hashedPassword = await bcrypt.hash('siswa123', 10)
+
     const siswa = await prisma.siswa.create({
       data: {
         ...rest,
         tanggal_lahir: new Date(rest.tanggal_lahir),
-        kelasId: kelasId || null
+        kelasId: kelasId || null,
+        user: {
+          create: {
+            email: `${rest.nisn}@student.sch.id`,
+            password: hashedPassword,
+            name: rest.nama,
+            role: 'SISWA'
+          }
+        }
       }
     })
     return NextResponse.json({ data: siswa }, { status: 201 })

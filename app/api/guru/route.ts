@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { formatZodErrors } from '@/lib/error-handler'
+import bcrypt from 'bcryptjs'
 
 export async function GET(req: Request) {
   try {
@@ -42,6 +43,13 @@ export async function POST(req: Request) {
     const validated = guruSchema.parse(body)
     const { nip, nama, email, no_hp, alamat, foto } = validated
 
+    const existingUser = await prisma.user.findUnique({ where: { email } })
+    if (existingUser) {
+      return NextResponse.json({ error: 'Email sudah digunakan' }, { status: 400 })
+    }
+
+    const hashedPassword = await bcrypt.hash('guru123', 10)
+
     const guru = await prisma.guru.create({
       data: {
         nama,
@@ -49,7 +57,15 @@ export async function POST(req: Request) {
         no_hp,
         alamat,
         nip: nip || undefined,
-        foto: foto || undefined
+        foto: foto || undefined,
+        user: {
+          create: {
+            email,
+            password: hashedPassword,
+            name: nama,
+            role: 'GURU'
+          }
+        }
       } as any
     })
     return NextResponse.json({ data: guru }, { status: 201 })
