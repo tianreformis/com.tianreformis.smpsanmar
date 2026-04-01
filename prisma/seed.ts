@@ -47,10 +47,15 @@ async function main() {
   console.log('Created admin')
 
   // Create default tahun pelajaran
-  const tp = await prisma.tahunPelajaran.create({
-    data: { tahun: '2025/2026', isActive: true }
-  })
-  console.log(`Created tahun pelajaran: ${tp.tahun}`)
+  let tp = await prisma.tahunPelajaran.findFirst({ where: { tahun: '2025/2026' } })
+  if (!tp) {
+    tp = await prisma.tahunPelajaran.create({
+      data: { tahun: '2025/2026', isActive: true }
+    })
+    console.log(`Created tahun pelajaran: ${tp.tahun}`)
+  } else {
+    console.log(`Tahun pelajaran ${tp.tahun} already exists`)
+  }
 
   // Create 9 guru (6 wali kelas + 3 guru tambahan)
   const guruData = [
@@ -104,7 +109,9 @@ async function main() {
 
   const kelasMap: Record<string, string> = {}
   for (const k of kelasList) {
-    const existing = await prisma.kelas.findUnique({ where: { nama_kelas: k.nama } })
+    const existing = await prisma.kelas.findFirst({
+      where: { nama_kelas: k.nama, tahunPelajaranId: tp.id }
+    })
     if (existing) {
       kelasMap[k.nama] = existing.id
       continue
@@ -152,6 +159,12 @@ async function main() {
       const jk = i % 2 === 0 ? 'L' : 'P'
       const nama = generateNama(jk)
       const nisn = generateNISN(siswaCounter)
+
+      const existingSiswa = await prisma.siswa.findUnique({ where: { nisn } })
+      if (existingSiswa) {
+        allSiswa.push({ id: existingSiswa.id, nama: existingSiswa.nama, nisn, kelasId })
+        continue
+      }
 
       const siswa = await prisma.siswa.create({
         data: {
