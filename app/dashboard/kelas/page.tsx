@@ -31,7 +31,7 @@ export default function KelasPage() {
   const [guru, setGuru] = useState<Guru[]>([])
   const [tahunPelajaran, setTahunPelajaran] = useState<{ id: string; tahun: string }[]>([])
   const [activeTP, setActiveTP] = useState<string>('')
-  const [filterTP, setFilterTP] = useState<string>('')
+  const [filterTP, setFilterTP] = useState<string>('all')
   const [loading, setLoading] = useState(true)
   const [pagination, setPagination] = useState<PaginationState>({ total: 0, page: 1, limit: 10, totalPages: 0 })
   const [perPage, setPerPage] = useState(10)
@@ -39,12 +39,19 @@ export default function KelasPage() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState({ nama_kelas: '', waliKelasId: '' })
 
-  useEffect(() => { fetchData(); fetchGuru(); fetchTahunPelajaran() }, [pagination.page, perPage, filterTP])
+  useEffect(() => {
+    fetchTahunPelajaran()
+  }, [])
+
+  useEffect(() => {
+    fetchData()
+    fetchGuru()
+  }, [pagination.page, perPage, filterTP])
 
   const fetchData = async () => {
     setLoading(true)
     try {
-      const res = await fetch(`/api/kelas?page=${pagination.page}&limit=${perPage}${filterTP ? `&tahunPelajaranId=${filterTP}` : ''}`)
+      const res = await fetch(`/api/kelas?page=${pagination.page}&limit=${perPage}${filterTP && filterTP !== 'all' ? `&tahunPelajaranId=${filterTP}` : ''}`)
       const json = await res.json()
       setData(json.data || [])
       setPagination(json.pagination || { total: 0, page: 1, limit: 10, totalPages: 0 })
@@ -68,7 +75,7 @@ export default function KelasPage() {
       const active = json.data?.find((tp: any) => tp.isActive)
       if (active) {
         setActiveTP(active.id)
-        setFilterTP(active.id)
+        setFilterTP(prev => prev === 'all' ? active.id : prev)
       }
     } catch (e) { console.error('Error fetching tahun pelajaran') }
   }

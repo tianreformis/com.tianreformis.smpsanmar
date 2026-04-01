@@ -51,7 +51,7 @@ export default function SiswaPage() {
   const [kelas, setKelas] = useState<{ id: string; nama_kelas: string }[]>([])
   const [tahunPelajaran, setTahunPelajaran] = useState<{ id: string; tahun: string }[]>([])
   const [activeTP, setActiveTP] = useState<string>('')
-  const [filterTP, setFilterTP] = useState<string>('')
+  const [filterTP, setFilterTP] = useState<string>('all')
   const [pagination, setPagination] = useState<Pagination>({ total: 0, page: 1, limit: 10, totalPages: 0 })
   const [perPage, setPerPage] = useState(10)
   const [loading, setLoading] = useState(true)
@@ -63,14 +63,17 @@ export default function SiswaPage() {
   })
 
   useEffect(() => {
+    fetchTahunPelajaran()
+  }, [])
+
+  useEffect(() => {
     fetchData()
     fetchKelas()
-    fetchTahunPelajaran()
   }, [pagination.page, perPage, search, filterTP])
 
   const fetchData = async () => {
     try {
-      const url = `/api/siswa?page=${pagination.page}&limit=${perPage}&search=${search}${filterTP ? `&tahunPelajaranId=${filterTP}` : ''}`
+      const url = `/api/siswa?page=${pagination.page}&limit=${perPage}&search=${search}${filterTP && filterTP !== 'all' ? `&tahunPelajaranId=${filterTP}` : ''}`
       const res = await fetch(url)
       const json = await res.json()
       const mapped = (json.data || []).map((s: any) => ({
@@ -99,7 +102,7 @@ export default function SiswaPage() {
       const active = json.data?.find((tp: any) => tp.isActive)
       if (active) {
         setActiveTP(active.id)
-        setFilterTP(active.id)
+        setFilterTP(prev => prev === '' ? active.id : prev)
       }
     } catch (e) { console.error('Error fetching tahun pelajaran') }
   }
