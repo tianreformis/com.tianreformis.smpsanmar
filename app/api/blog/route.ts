@@ -12,15 +12,31 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url)
     const status = searchParams.get('status')
     const publicOnly = searchParams.get('public') === 'true'
+    const page = parseInt(searchParams.get('page') || '1')
+    const limit = Math.min(parseInt(searchParams.get('limit') || '5'), 100)
+    const skip = (page - 1) * limit
 
     const where = publicOnly ? { status: 'publish' } : status ? { status } : {}
 
-    const data = await prisma.blogPost.findMany({
-      where,
-      orderBy: { createdAt: 'desc' }
-    })
+    const [data, total] = await Promise.all([
+      prisma.blogPost.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit
+      }),
+      prisma.blogPost.count({ where })
+    ])
 
-    return NextResponse.json({ data })
+    return NextResponse.json({
+      data,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit)
+      }
+    })
   } catch {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }

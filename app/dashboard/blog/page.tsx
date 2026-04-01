@@ -24,6 +24,13 @@ interface BlogPost {
   createdAt: string
 }
 
+interface Pagination {
+  total: number
+  page: number
+  limit: number
+  totalPages: number
+}
+
 interface FormData {
   title: string
   slug: string
@@ -41,14 +48,19 @@ export default function BlogPage() {
   const [imageMode, setImageMode] = useState<'url' | 'upload'>('url')
   const [uploading, setUploading] = useState(false)
   const [previewUrl, setPreviewUrl] = useState('')
+  const [pagination, setPagination] = useState<Pagination>({ total: 0, page: 1, limit: 5, totalPages: 0 })
+  const [perPage, setPerPage] = useState(5)
 
-  useEffect(() => { fetchData() }, [])
+  useEffect(() => {
+    fetchData()
+  }, [pagination.page, perPage])
 
   const fetchData = async () => {
     try {
-      const res = await fetch('/api/blog')
+      const res = await fetch(`/api/blog?page=${pagination.page}&limit=${perPage}`)
       const json = await res.json()
-      setData(json.data)
+      setData(json.data || [])
+      setPagination(json.pagination || { total: 0, page: 1, limit: 5, totalPages: 0 })
     } catch { toast.error('Gagal mengambil data') }
     finally { setLoading(false) }
   }
@@ -74,7 +86,6 @@ export default function BlogPage() {
     setEditingId(post.id)
     setForm({ title: post.title, slug: post.slug, content: post.content, thumbnail: post.thumbnail || '', status: post.status })
     setPreviewUrl(post.thumbnail || '')
-    setImageMode(post.thumbnail?.startsWith('http') ? 'url' : 'url')
     setIsModalOpen(true)
   }
 
@@ -135,6 +146,12 @@ export default function BlogPage() {
     setPreviewUrl('')
   }
 
+  const handlePerPageChange = (val: string) => {
+    const num = parseInt(val)
+    setPerPage(num)
+    setPagination(p => ({ ...p, page: 1 }))
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -145,6 +162,26 @@ export default function BlogPage() {
         <Button onClick={() => { resetForm(); setIsModalOpen(true) }}>
           <Plus className="h-4 w-4 mr-2" /> Tambah Artikel
         </Button>
+      </div>
+
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">Tampilkan</span>
+          <Select value={String(perPage)} onValueChange={handlePerPageChange}>
+            <SelectTrigger className="w-20">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="5">5</SelectItem>
+              <SelectItem value="10">10</SelectItem>
+              <SelectItem value="20">20</SelectItem>
+              <SelectItem value="50">50</SelectItem>
+              <SelectItem value="100">100</SelectItem>
+            </SelectContent>
+          </Select>
+          <span className="text-sm text-muted-foreground">per halaman</span>
+        </div>
+        <span className="text-sm text-muted-foreground">Total: {pagination.total} artikel</span>
       </div>
 
       <Table>
@@ -164,9 +201,13 @@ export default function BlogPage() {
             <TableRow key={i}>
               {[...Array(7)].map((_, j) => <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>)}
             </TableRow>
-          )) : data.map((post, i) => (
+          )) : data.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Tidak ada data</TableCell>
+            </TableRow>
+          ) : data.map((post, i) => (
             <TableRow key={post.id}>
-              <TableCell>{i + 1}</TableCell>
+              <TableCell>{(pagination.page - 1) * pagination.limit + i + 1}</TableCell>
               <TableCell>
                 {post.thumbnail ? (
                   <img src={post.thumbnail} alt="" className="h-10 w-16 object-cover rounded" />
@@ -195,6 +236,54 @@ export default function BlogPage() {
           ))}
         </TableBody>
       </Table>
+
+      {pagination.totalPages > 1 && (
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            Halaman {pagination.page} dari {pagination.totalPages}
+          </p>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={pagination.page <= 1}
+              onClick={() => setPagination(p => ({ ...p, page: p.page - 1 }))}
+            >
+              Previous
+            </Button>
+            {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
+              let pageNum: number
+              if (pagination.totalPages <= 5) {
+                pageNum = i + 1
+              } else if (pagination.page <= 3) {
+                pageNum = i + 1
+              } else if (pagination.page >= pagination.totalPages - 2) {
+                pageNum = pagination.totalPages - 4 + i
+              } else {
+                pageNum = pagination.page - 2 + i
+              }
+              return (
+                <Button
+                  key={pageNum}
+                  variant={pagination.page === pageNum ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setPagination(p => ({ ...p, page: pageNum }))}
+                >
+                  {pageNum}
+                </Button>
+              )
+            })}
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={pagination.page >= pagination.totalPages}
+              onClick={() => setPagination(p => ({ ...p, page: p.page + 1 }))}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      )}
 
       <Dialog open={isModalOpen} onOpenChange={(open) => { if (!open) { setIsModalOpen(false); resetForm() } }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
