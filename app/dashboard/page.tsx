@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { GraduationCap, Users, School, ClipboardList, FileText } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
@@ -16,14 +17,35 @@ interface Stats {
 export default function DashboardPage() {
   const [stats, setStats] = useState<Stats | null>(null)
   const [loading, setLoading] = useState(true)
+  const [tahunPelajaran, setTahunPelajaran] = useState<{ id: string; tahun: string }[]>([])
+  const [activeTP, setActiveTP] = useState<string>('')
+  const [selectedTP, setSelectedTP] = useState<string>('')
+
+  useEffect(() => {
+    fetchTahunPelajaran()
+  }, [])
 
   useEffect(() => {
     fetchStats()
-  }, [])
+  }, [selectedTP])
+
+  const fetchTahunPelajaran = async () => {
+    try {
+      const res = await fetch('/api/tahun-pelajaran')
+      const json = await res.json()
+      setTahunPelajaran(json.data || [])
+      const active = json.data?.find((tp: any) => tp.isActive)
+      if (active) {
+        setActiveTP(active.id)
+        setSelectedTP(active.id)
+      }
+    } catch (e) { console.error('Error fetching tahun pelajaran') }
+  }
 
   const fetchStats = async () => {
     try {
-      const res = await fetch('/api/stats')
+      const url = `/api/stats${selectedTP ? `?tahunPelajaranId=${selectedTP}` : ''}`
+      const res = await fetch(url)
       const data = await res.json()
       setStats(data.data)
     } catch (error) {
@@ -52,11 +74,30 @@ export default function DashboardPage() {
     )
   }
 
+  const activeTPLabel = tahunPelajaran.find(tp => tp.id === activeTP)?.tahun || ''
+
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
-        <p className="text-muted-foreground">Overview sistem manajemen sekolah</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
+          <p className="text-muted-foreground">Overview sistem manajemen sekolah</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">Tahun Pelajaran:</span>
+          <Select value={selectedTP} onValueChange={setSelectedTP}>
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder={activeTPLabel || 'Pilih'} />
+            </SelectTrigger>
+            <SelectContent>
+              {tahunPelajaran.map(tp => (
+                <SelectItem key={tp.id} value={tp.id}>
+                  {tp.tahun}{tp.id === activeTP ? ' (Aktif)' : ''}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
