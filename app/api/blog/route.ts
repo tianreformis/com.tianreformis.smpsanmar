@@ -10,7 +10,7 @@ import { formatZodErrors } from '@/lib/error-handler'
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url)
-    const status = searchParams.get('status') || 'publish'
+    const status = searchParams.get('status')
     const publicOnly = searchParams.get('public') === 'true'
 
     const where = publicOnly ? { status: 'publish' } : status ? { status } : {}
