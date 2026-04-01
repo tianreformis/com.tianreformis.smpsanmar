@@ -68,7 +68,7 @@ npm run dev
 
 ## Struktur Folder
 
-```
+``
 ├── app/
 │   ├── api/           # API Routes
 │   ├── dashboard/     # Dashboard pages
