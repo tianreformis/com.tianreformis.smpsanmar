@@ -232,10 +232,10 @@ export default function SiswaPage() {
         </div>
         <div className="flex items-center gap-2">
           <span className="text-sm text-muted-foreground">Tahun Pelajaran:</span>
-          <Select value={filterTP} onValueChange={(v) => { setFilterTP(v); setPagination(p => ({ ...p, page: 1 })) }}>
-            <SelectTrigger className="w-40"><SelectValue placeholder="Semua" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">Semua</SelectItem>
+            <Select value={filterTP} onValueChange={(v) => { setFilterTP(v === 'all' ? '' : v); setPagination(p => ({ ...p, page: 1 })) }}>
+              <SelectTrigger className="w-40"><SelectValue placeholder="Semua" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Semua</SelectItem>
               {tahunPelajaran.map(tp => <SelectItem key={tp.id} value={tp.id}>{tp.tahun}{tp.id === activeTP ? ' (Aktif)' : ''}</SelectItem>)}
             </SelectContent>
           </Select>

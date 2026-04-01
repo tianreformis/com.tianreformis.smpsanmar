@@ -147,10 +147,10 @@ export default function NilaiPage() {
           </div>
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">Semester:</span>
-            <Select value={filterSemester} onValueChange={(v) => { setFilterSemester(v); setPagination(p => ({ ...p, page: 1 })) }}>
+            <Select value={filterSemester || 'all'} onValueChange={(v) => { setFilterSemester(v === 'all' ? '' : v); setPagination(p => ({ ...p, page: 1 })) }}>
               <SelectTrigger className="w-32"><SelectValue placeholder="Semua" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Semua</SelectItem>
+                <SelectItem value="all">Semua</SelectItem>
                 {semesterOptions.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
               </SelectContent>
             </Select>
