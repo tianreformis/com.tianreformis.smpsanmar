@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Pencil, Trash2, Plus, ExternalLink } from 'lucide-react'
+import { Pencil, Trash2, Plus, ExternalLink, Upload, X, Image as ImageIcon, Link as LinkIcon } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import Link from 'next/link'
 
@@ -38,6 +38,9 @@ export default function BlogPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState<FormData>({ title: '', slug: '', content: '', thumbnail: '', status: 'draft' })
+  const [imageMode, setImageMode] = useState<'url' | 'upload'>('url')
+  const [uploading, setUploading] = useState(false)
+  const [previewUrl, setPreviewUrl] = useState('')
 
   useEffect(() => { fetchData() }, [])
 
@@ -70,6 +73,8 @@ export default function BlogPage() {
   const handleEdit = (post: BlogPost) => {
     setEditingId(post.id)
     setForm({ title: post.title, slug: post.slug, content: post.content, thumbnail: post.thumbnail || '', status: post.status })
+    setPreviewUrl(post.thumbnail || '')
+    setImageMode(post.thumbnail?.startsWith('http') ? 'url' : 'url')
     setIsModalOpen(true)
   }
 
@@ -82,11 +87,52 @@ export default function BlogPage() {
     } catch { toast.error('Gagal hapus') }
   }
 
-  const resetForm = () => { setEditingId(null); setForm({ title: '', slug: '', content: '', thumbnail: '', status: 'draft' }) }
+  const resetForm = () => {
+    setEditingId(null)
+    setForm({ title: '', slug: '', content: '', thumbnail: '', status: 'draft' })
+    setPreviewUrl('')
+    setImageMode('url')
+  }
 
   const generateSlug = () => {
     const slug = form.title.toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-')
     setForm({ ...form, slug })
+  }
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData
+      })
+
+      const json = await res.json()
+
+      if (!res.ok) {
+        toast.error(json.error || 'Gagal upload')
+        return
+      }
+
+      setForm({ ...form, thumbnail: json.url })
+      setPreviewUrl(json.url)
+      toast.success('Upload berhasil')
+    } catch {
+      toast.error('Terjadi kesalahan saat upload')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const removeImage = () => {
+    setForm({ ...form, thumbnail: '' })
+    setPreviewUrl('')
   }
 
   return (
@@ -105,6 +151,7 @@ export default function BlogPage() {
         <TableHeader>
           <TableRow>
             <TableHead>No</TableHead>
+            <TableHead>Thumbnail</TableHead>
             <TableHead>Judul</TableHead>
             <TableHead>Slug</TableHead>
             <TableHead>Status</TableHead>
@@ -115,11 +162,20 @@ export default function BlogPage() {
         <TableBody>
           {loading ? [...Array(5)].map((_, i) => (
             <TableRow key={i}>
-              {[...Array(6)].map((_, j) => <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>)}
+              {[...Array(7)].map((_, j) => <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>)}
             </TableRow>
           )) : data.map((post, i) => (
             <TableRow key={post.id}>
               <TableCell>{i + 1}</TableCell>
+              <TableCell>
+                {post.thumbnail ? (
+                  <img src={post.thumbnail} alt="" className="h-10 w-16 object-cover rounded" />
+                ) : (
+                  <div className="h-10 w-16 bg-muted rounded flex items-center justify-center">
+                    <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                )}
+              </TableCell>
               <TableCell className="font-medium">{post.title}</TableCell>
               <TableCell className="font-mono text-sm">{post.slug}</TableCell>
               <TableCell>
@@ -140,8 +196,8 @@ export default function BlogPage() {
         </TableBody>
       </Table>
 
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="max-w-2xl">
+      <Dialog open={isModalOpen} onOpenChange={(open) => { if (!open) { setIsModalOpen(false); resetForm() } }}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>{editingId ? 'Edit Artikel' : 'Tambah Artikel'}</DialogTitle></DialogHeader>
           <form onSubmit={handleSubmit}>
             <div className="grid gap-4 py-4">
@@ -160,10 +216,67 @@ export default function BlogPage() {
                 <Label>Konten</Label>
                 <Textarea value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} className="min-h-[200px]" required />
               </div>
-              <div className="space-y-2">
-                <Label>Thumbnail URL</Label>
-                <Input value={form.thumbnail} onChange={(e) => setForm({ ...form, thumbnail: e.target.value })} />
+
+              <div className="space-y-3">
+                <Label>Featured Image</Label>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant={imageMode === 'url' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setImageMode('url')}
+                    className="flex items-center gap-1"
+                  >
+                    <LinkIcon className="h-4 w-4" /> URL
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={imageMode === 'upload' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setImageMode('upload')}
+                    className="flex items-center gap-1"
+                  >
+                    <Upload className="h-4 w-4" /> Upload
+                  </Button>
+                </div>
+
+                {imageMode === 'url' ? (
+                  <Input
+                    value={form.thumbnail}
+                    onChange={(e) => { setForm({ ...form, thumbnail: e.target.value }); setPreviewUrl(e.target.value) }}
+                    placeholder="https://example.com/image.jpg"
+                  />
+                ) : (
+                  <div className="space-y-2">
+                    <Input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/gif"
+                      onChange={handleUpload}
+                      disabled={uploading}
+                    />
+                    <p className="text-xs text-muted-foreground">Maksimal 2MB. Format: JPEG, PNG, WebP, GIF</p>
+                  </div>
+                )}
+
+                {previewUrl && (
+                  <div className="relative mt-2">
+                    <img
+                      src={previewUrl}
+                      alt="Preview"
+                      className="w-full max-h-48 object-cover rounded-lg border"
+                      onError={() => setPreviewUrl('')}
+                    />
+                    <button
+                      type="button"
+                      onClick={removeImage}
+                      className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                )}
               </div>
+
               <div className="space-y-2">
                 <Label>Status</Label>
                 <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}>
@@ -176,8 +289,8 @@ export default function BlogPage() {
               </div>
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>Batal</Button>
-              <Button type="submit">{editingId ? 'Update' : 'Simpan'}</Button>
+              <Button type="button" variant="outline" onClick={() => { setIsModalOpen(false); resetForm() }}>Batal</Button>
+              <Button type="submit" disabled={uploading}>{editingId ? 'Update' : 'Simpan'}</Button>
             </DialogFooter>
           </form>
         </DialogContent>

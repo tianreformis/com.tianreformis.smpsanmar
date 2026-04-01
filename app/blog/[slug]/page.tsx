@@ -28,14 +28,14 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
           </div>
         )}
         
-        <h1 className="text-4xl font-bold mb-4">{post.title}</h1>
+        <h1 className="text-3xl lg:text-4xl font-bold mb-4">{post.title}</h1>
         
         <div className="text-muted-foreground mb-8">
           Dipublikasikan pada {new Date(post.createdAt).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })}
         </div>
 
         <Card>
-          <CardContent className="prose max-w-none pt-6">
+          <CardContent className="prose max-w-none dark:prose-invert pt-6">
             <div className="whitespace-pre-wrap">{post.content}</div>
           </CardContent>
         </Card>

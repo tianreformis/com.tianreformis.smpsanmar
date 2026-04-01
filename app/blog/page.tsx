@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { ImageIcon } from 'lucide-react'
 
 export const revalidate = 60
 
@@ -25,9 +26,13 @@ export default async function BlogListPage() {
           {posts.map((post) => (
             <Link key={post.id} href={`/blog/${post.slug}`}>
               <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer">
-                {post.thumbnail && (
+                {post.thumbnail ? (
                   <div className="aspect-video bg-muted overflow-hidden">
                     <img src={post.thumbnail} alt={post.title} className="w-full h-full object-cover" />
+                  </div>
+                ) : (
+                  <div className="aspect-video bg-muted flex items-center justify-center">
+                    <ImageIcon className="h-12 w-12 text-muted-foreground/50" />
                   </div>
                 )}
                 <CardHeader>
