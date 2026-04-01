@@ -18,12 +18,14 @@ export async function GET(req: Request) {
     const siswaId = searchParams.get('siswaId')
     const mapelId = searchParams.get('mapelId')
     const semester = searchParams.get('semester')
+    const tahunPelajaranId = searchParams.get('tahunPelajaranId')
     const skip = (page - 1) * limit
 
     const where: any = {}
     if (siswaId) where.siswaId = siswaId
     if (mapelId) where.mapelId = mapelId
     if (semester) where.semester = semester
+    if (tahunPelajaranId) where.tahunPelajaranId = tahunPelajaranId
 
     const [data, total] = await Promise.all([
       prisma.nilai.findMany({ where, include: { siswa: true, mapel: true }, skip, take: limit, orderBy: { createdAt: 'desc' } }),
@@ -44,10 +46,14 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json()
-    const data = nilaiSchema.parse(body)
+    const { tahunPelajaranId, ...rest } = body
+    const data = nilaiSchema.parse(rest)
+
+    const activeTP = tahunPelajaranId || (await prisma.tahunPelajaran.findFirst({ where: { isActive: true } }))?.id
+    if (!activeTP) return NextResponse.json({ error: 'Tidak ada tahun pelajaran aktif' }, { status: 400 })
 
     const existing = await prisma.nilai.findFirst({
-      where: { siswaId: data.siswaId, mapelId: data.mapelId, semester: data.semester }
+      where: { siswaId: data.siswaId, mapelId: data.mapelId, semester: data.semester, tahunPelajaranId: activeTP }
     })
 
     let nilai
@@ -57,7 +63,7 @@ export async function POST(req: Request) {
         data: { nilai: data.nilai }
       })
     } else {
-      nilai = await prisma.nilai.create({ data })
+      nilai = await prisma.nilai.create({ data: { ...data, tahunPelajaranId: activeTP } })
     }
 
     await logActivity(session.user.id, 'INPUT_NILAI', `Input nilai for siswa`)

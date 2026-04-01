@@ -16,11 +16,15 @@ export async function GET(req: Request) {
     const limit = parseInt(searchParams.get('limit') || '10')
     const kelasId = searchParams.get('kelasId')
     const hari = searchParams.get('hari')
+    const tahunPelajaranId = searchParams.get('tahunPelajaranId')
+    const semester = searchParams.get('semester')
     const skip = (page - 1) * limit
 
     const where: any = {}
     if (kelasId) where.kelasId = kelasId
     if (hari) where.hari = hari
+    if (tahunPelajaranId) where.tahunPelajaranId = tahunPelajaranId
+    if (semester) where.semester = semester
 
     const [data, total] = await Promise.all([
       prisma.jadwal.findMany({
@@ -43,9 +47,15 @@ export async function POST(req: Request) {
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const body = await req.json()
-    const data = jadwalSchema.parse(body)
+    const { tahunPelajaranId, semester, ...rest } = body
+    const data = jadwalSchema.parse(rest)
 
-    const jadwal = await prisma.jadwal.create({ data })
+    const activeTP = tahunPelajaranId || (await prisma.tahunPelajaran.findFirst({ where: { isActive: true } }))?.id
+    if (!activeTP) return NextResponse.json({ error: 'Tidak ada tahun pelajaran aktif' }, { status: 400 })
+
+    const jadwal = await prisma.jadwal.create({
+      data: { ...data, tahunPelajaranId: activeTP, semester: semester || 'Ganjil' }
+    })
     return NextResponse.json({ data: jadwal }, { status: 201 })
   } catch (error) {
     console.error('POST /api/jadwal:', error)

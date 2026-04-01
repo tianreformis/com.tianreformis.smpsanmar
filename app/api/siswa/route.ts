@@ -13,11 +13,16 @@ export async function GET(req: Request) {
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '10')
     const search = searchParams.get('search') || ''
+    const tahunPelajaranId = searchParams.get('tahunPelajaranId') || ''
     const skip = (page - 1) * limit
 
-    const where = search ? {
-      OR: [{ nama: { contains: search } }, { nisn: { contains: search } }]
-    } : {}
+    const where: any = {}
+    if (search) {
+      where.OR = [{ nama: { contains: search } }, { nisn: { contains: search } }]
+    }
+    if (tahunPelajaranId) {
+      where.tahunPelajaranId = tahunPelajaranId
+    }
 
     const [data, total] = await Promise.all([
       prisma.siswa.findMany({ where, include: { kelas: true, user: { select: { email: true } } }, skip, take: limit, orderBy: { createdAt: 'desc' } }),
@@ -37,7 +42,10 @@ export async function POST(req: Request) {
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const body = await req.json()
-    const { kelasId, ...rest } = body
+    const { kelasId, tahunPelajaranId, ...rest } = body
+
+    const activeTP = tahunPelajaranId || (await prisma.tahunPelajaran.findFirst({ where: { isActive: true } }))?.id
+    if (!activeTP) return NextResponse.json({ error: 'Tidak ada tahun pelajaran aktif' }, { status: 400 })
 
     const hashedPassword = await bcrypt.hash('siswa123', 10)
 
@@ -46,6 +54,7 @@ export async function POST(req: Request) {
         ...rest,
         tanggal_lahir: new Date(rest.tanggal_lahir),
         kelasId: kelasId || null,
+        tahunPelajaranId: activeTP,
         user: {
           create: {
             email: `${rest.nisn}@student.sch.id`,

@@ -49,6 +49,9 @@ interface FormData {
 export default function SiswaPage() {
   const [data, setData] = useState<Siswa[]>([])
   const [kelas, setKelas] = useState<{ id: string; nama_kelas: string }[]>([])
+  const [tahunPelajaran, setTahunPelajaran] = useState<{ id: string; tahun: string }[]>([])
+  const [activeTP, setActiveTP] = useState<string>('')
+  const [filterTP, setFilterTP] = useState<string>('')
   const [pagination, setPagination] = useState<Pagination>({ total: 0, page: 1, limit: 10, totalPages: 0 })
   const [perPage, setPerPage] = useState(10)
   const [loading, setLoading] = useState(true)
@@ -62,11 +65,13 @@ export default function SiswaPage() {
   useEffect(() => {
     fetchData()
     fetchKelas()
-  }, [pagination.page, perPage, search])
+    fetchTahunPelajaran()
+  }, [pagination.page, perPage, search, filterTP])
 
   const fetchData = async () => {
     try {
-      const res = await fetch(`/api/siswa?page=${pagination.page}&limit=${perPage}&search=${search}`)
+      const url = `/api/siswa?page=${pagination.page}&limit=${perPage}&search=${search}${filterTP ? `&tahunPelajaranId=${filterTP}` : ''}`
+      const res = await fetch(url)
       const json = await res.json()
       const mapped = (json.data || []).map((s: any) => ({
         ...s,
@@ -84,6 +89,19 @@ export default function SiswaPage() {
       const json = await res.json()
       setKelas(json.data || [])
     } catch (e) { console.error('Error fetching kelas') }
+  }
+
+  const fetchTahunPelajaran = async () => {
+    try {
+      const res = await fetch('/api/tahun-pelajaran')
+      const json = await res.json()
+      setTahunPelajaran(json.data || [])
+      const active = json.data?.find((tp: any) => tp.isActive)
+      if (active) {
+        setActiveTP(active.id)
+        setFilterTP(active.id)
+      }
+    } catch (e) { console.error('Error fetching tahun pelajaran') }
   }
 
   const generateEmail = (nisn: string) => `${nisn}@student.sch.id`
@@ -211,6 +229,16 @@ export default function SiswaPage() {
           <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
           <Input placeholder="Cari nama atau NISN..." className="pl-10" value={search}
             onChange={(e) => { setSearch(e.target.value); setPagination(p => ({ ...p, page: 1 })) }} />
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">Tahun Pelajaran:</span>
+          <Select value={filterTP} onValueChange={(v) => { setFilterTP(v); setPagination(p => ({ ...p, page: 1 })) }}>
+            <SelectTrigger className="w-40"><SelectValue placeholder="Semua" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">Semua</SelectItem>
+              {tahunPelajaran.map(tp => <SelectItem key={tp.id} value={tp.id}>{tp.tahun}{tp.id === activeTP ? ' (Aktif)' : ''}</SelectItem>)}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 

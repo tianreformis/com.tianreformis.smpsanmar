@@ -37,16 +37,17 @@ export default function NilaiPage() {
   const [perPage, setPerPage] = useState(10)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [form, setForm] = useState({ siswaId: '', mapelId: '', nilai: '', semester: '' })
+  const [filterSemester, setFilterSemester] = useState('')
   const [rerata, setRerata] = useState<{ semester: string; nilai: number }[]>([])
 
   const semesterOptions = ['Ganjil', 'Genap']
 
-  useEffect(() => { fetchData(); fetchOptions() }, [pagination.page, perPage])
+  useEffect(() => { fetchData(); fetchOptions() }, [pagination.page, perPage, filterSemester])
 
   const fetchData = async () => {
     setLoading(true)
     try {
-      const res = await fetch(`/api/nilai?page=${pagination.page}&limit=${perPage}`)
+      const res = await fetch(`/api/nilai?page=${pagination.page}&limit=${perPage}${filterSemester ? `&semester=${filterSemester}` : ''}`)
       const json = await res.json()
       setData(json.data || [])
       setPagination(json.pagination || { total: 0, page: 1, limit: 10, totalPages: 0 })
@@ -129,19 +130,31 @@ export default function NilaiPage() {
       </div>
 
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">Tampilkan</span>
-          <Select value={String(perPage)} onValueChange={handlePerPageChange}>
-            <SelectTrigger className="w-20"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="5">5</SelectItem>
-              <SelectItem value="10">10</SelectItem>
-              <SelectItem value="20">20</SelectItem>
-              <SelectItem value="50">50</SelectItem>
-              <SelectItem value="100">100</SelectItem>
-            </SelectContent>
-          </Select>
-          <span className="text-sm text-muted-foreground">per halaman</span>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Tampilkan</span>
+            <Select value={String(perPage)} onValueChange={handlePerPageChange}>
+              <SelectTrigger className="w-20"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="5">5</SelectItem>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="20">20</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+                <SelectItem value="100">100</SelectItem>
+              </SelectContent>
+            </Select>
+            <span className="text-sm text-muted-foreground">per halaman</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Semester:</span>
+            <Select value={filterSemester} onValueChange={(v) => { setFilterSemester(v); setPagination(p => ({ ...p, page: 1 })) }}>
+              <SelectTrigger className="w-32"><SelectValue placeholder="Semua" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Semua</SelectItem>
+                {semesterOptions.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
         <span className="text-sm text-muted-foreground">Total: {pagination.total} nilai</span>
       </div>

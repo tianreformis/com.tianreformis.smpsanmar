@@ -14,14 +14,19 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url)
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '10')
+    const tahunPelajaranId = searchParams.get('tahunPelajaranId') || ''
     const skip = (page - 1) * limit
+
+    const where: any = {}
+    if (tahunPelajaranId) where.tahunPelajaranId = tahunPelajaranId
 
     const [data, total] = await Promise.all([
       prisma.kelas.findMany({
+        where,
         include: { waliKelas: true, _count: { select: { siswa: true } } },
         skip, take: limit, orderBy: { createdAt: 'desc' }
       }),
-      prisma.kelas.count()
+      prisma.kelas.count({ where })
     ])
 
     return NextResponse.json({ data, pagination: { total, page, limit, totalPages: Math.ceil(total / limit) } })
@@ -38,9 +43,12 @@ export async function POST(req: Request) {
 
     const body = await req.json()
     const data = kelasSchema.parse(body)
-    const { waliKelasId, ...rest } = data
+    const { waliKelasId, tahunPelajaranId, ...rest } = data
 
-    const kelas = await prisma.kelas.create({ data: { ...rest, waliKelasId: waliKelasId || null } })
+    const activeTP = tahunPelajaranId || (await prisma.tahunPelajaran.findFirst({ where: { isActive: true } }))?.id
+    if (!activeTP) return NextResponse.json({ error: 'Tidak ada tahun pelajaran aktif' }, { status: 400 })
+
+    const kelas = await prisma.kelas.create({ data: { ...rest, waliKelasId: waliKelasId || null, tahunPelajaranId: activeTP } })
     return NextResponse.json({ data: kelas }, { status: 201 })
   } catch (error) {
     console.error('POST /api/kelas:', error)

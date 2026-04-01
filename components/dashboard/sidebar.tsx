@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
 import { 
   LayoutDashboard, Users, GraduationCap, BookOpen, 
   Calendar, FileText, ClipboardList, Newspaper, 
-  Settings, LogOut, School, KeyRound
+  Settings, LogOut, School, KeyRound, CalendarDays
 } from 'lucide-react'
 import { signOut } from 'next-auth/react'
 
@@ -24,6 +24,7 @@ const adminMenu = [
   { href: '/dashboard/nilai', icon: FileText, label: 'Nilai' },
   { href: '/dashboard/ppdb', icon: ClipboardList, label: 'PPDB' },
   { href: '/dashboard/blog', icon: Newspaper, label: 'Blog' },
+  { href: '/dashboard/tahun-pelajaran', icon: CalendarDays, label: 'Tahun Pelajaran' },
   { href: '/dashboard/reset-password', icon: KeyRound, label: 'Reset Password' },
   { href: '/dashboard/settings', icon: Settings, label: 'Settings' },
 ]

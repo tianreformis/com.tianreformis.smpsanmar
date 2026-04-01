@@ -7,6 +7,19 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Tahun Pelajaran
+model TahunPelajaran {
+  id       String   @id @default(cuid())
+  tahun    String   @unique // e.g. "2025/2026"
+  isActive Boolean  @default(false)
+  siswa    Siswa[]
+  kelas    Kelas[]
+  jadwal   Jadwal[]
+  nilai    Nilai[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 // User for authentication
 model User {
   id        String   @id @default(cuid())
@@ -26,20 +39,22 @@ model User {
 
 // Siswa/Student
 model Siswa {
-  id            String    @id @default(cuid())
-  nisn          String    @unique
-  nama          String
-  jenis_kelamin String
-  tanggal_lahir DateTime
-  alamat        String
-  no_hp         String
-  foto          String?
-  kelasId       String?
-  kelas         Kelas?    @relation(fields: [kelasId], references: [id])
-  nilai         Nilai[]
-  user          User?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id                String    @id @default(cuid())
+  nisn              String    @unique
+  nama              String
+  jenis_kelamin     String
+  tanggal_lahir     DateTime
+  alamat            String
+  no_hp             String
+  foto              String?
+  tahunPelajaranId  String
+  tahunPelajaran    TahunPelajaran @relation(fields: [tahunPelajaranId], references: [id])
+  kelasId           String?
+  kelas             Kelas?    @relation(fields: [kelasId], references: [id])
+  nilai             Nilai[]
+  user              User?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 }
 
 // Guru/Teacher
@@ -61,14 +76,18 @@ model Guru {
 
 // Kelas/Class
 model Kelas {
-  id          String   @id @default(cuid())
-  nama_kelas  String   @unique
-  waliKelasId String?  @unique
-  waliKelas   Guru?    @relation("WaliKelas", fields: [waliKelasId], references: [id])
-  siswa       Siswa[]
-  jadwal      Jadwal[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                String   @id @default(cuid())
+  nama_kelas        String
+  tahunPelajaranId  String
+  tahunPelajaran    TahunPelajaran @relation(fields: [tahunPelajaranId], references: [id])
+  waliKelasId       String?  @unique
+  waliKelas         Guru?    @relation("WaliKelas", fields: [waliKelasId], references: [id])
+  siswa             Siswa[]
+  jadwal            Jadwal[]
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([nama_kelas, tahunPelajaranId])
 }
 
 // Mapel/Subject
@@ -85,31 +104,36 @@ model Mapel {
 
 // Jadwal/Schedule
 model Jadwal {
-  id         String   @id @default(cuid())
-  kelasId    String
-  kelas      Kelas    @relation(fields: [kelasId], references: [id])
-  mapelId    String
-  mapel      Mapel    @relation(fields: [mapelId], references: [id])
-  guruId     String
-  guru       Guru     @relation(fields: [guruId], references: [id])
-  hari       String
-  jam_mulai  String
-  jam_selesai String
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id                String   @id @default(cuid())
+  kelasId           String
+  kelas             Kelas    @relation(fields: [kelasId], references: [id])
+  mapelId           String
+  mapel             Mapel    @relation(fields: [mapelId], references: [id])
+  guruId            String
+  guru              Guru     @relation(fields: [guruId], references: [id])
+  tahunPelajaranId  String
+  tahunPelajaran    TahunPelajaran @relation(fields: [tahunPelajaranId], references: [id])
+  semester          String // "Ganjil" or "Genap"
+  hari              String
+  jam_mulai         String
+  jam_selesai       String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 }
 
 // Nilai/Grade
 model Nilai {
-  id        String   @id @default(cuid())
-  siswaId   String
-  siswa     Siswa    @relation(fields: [siswaId], references: [id])
-  mapelId   String
-  mapel     Mapel    @relation(fields: [mapelId], references: [id])
-  nilai     Float
-  semester  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                String   @id @default(cuid())
+  siswaId           String
+  siswa             Siswa    @relation(fields: [siswaId], references: [id])
+  mapelId           String
+  mapel             Mapel    @relation(fields: [mapelId], references: [id])
+  tahunPelajaranId  String
+  tahunPelajaran    TahunPelajaran @relation(fields: [tahunPelajaranId], references: [id])
+  semester          String // "Ganjil" or "Genap"
+  nilai             Float
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 }
 
 // PPDB (Penerimaan Siswa Baru)

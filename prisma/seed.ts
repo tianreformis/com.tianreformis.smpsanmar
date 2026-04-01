@@ -46,6 +46,12 @@ async function main() {
   }
   console.log('Created admin')
 
+  // Create default tahun pelajaran
+  const tp = await prisma.tahunPelajaran.create({
+    data: { tahun: '2025/2026', isActive: true }
+  })
+  console.log(`Created tahun pelajaran: ${tp.tahun}`)
+
   // Create 9 guru (6 wali kelas + 3 guru tambahan)
   const guruData = [
     { nip: '198501012010011001', nama: 'Drs. Bambang Suryanto, M.Pd.', email: 'bambang.suryanto@sekolah.sch.id' },
@@ -104,7 +110,7 @@ async function main() {
       continue
     }
     const kelas = await prisma.kelas.create({
-      data: { nama_kelas: k.nama, waliKelasId: guruIds[k.waliIdx] }
+      data: { nama_kelas: k.nama, waliKelasId: guruIds[k.waliIdx], tahunPelajaranId: tp.id }
     })
     kelasMap[k.nama] = kelas.id
   }
@@ -156,6 +162,7 @@ async function main() {
           alamat: `${pickRandom(jalan)} No. ${randomInt(1, 100)}`,
           no_hp: `08${randomInt(1000000000, 9999999999)}`,
           kelasId,
+          tahunPelajaranId: tp.id,
           user: {
             create: {
               email: `${nisn}@student.sch.id`,
@@ -182,6 +189,7 @@ async function main() {
           data: {
             siswaId: siswa.id,
             mapelId: mapelIds[mapelName],
+            tahunPelajaranId: tp.id,
             nilai: randomInt(65, 98),
             semester: pickRandom(['Ganjil', 'Genap'])
           }
@@ -208,6 +216,8 @@ async function main() {
             kelasId,
             mapelId: mapelIds[m.nama],
             guruId: guruIds[m.guruIdx],
+            tahunPelajaranId: tp.id,
+            semester: 'Ganjil',
             hari: hariList[d],
             jam_mulai: jamList[d],
             jam_selesai: jamSelesaiList[d]
