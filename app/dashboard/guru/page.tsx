@@ -146,6 +146,9 @@ export default function GuruPage() {
               <div className="space-y-2"><Label>NIP <span className="text-muted-foreground font-normal">(opsional)</span></Label><Input value={form.nip} onChange={(e) => setForm({ ...form, nip: e.target.value })} /></div>
               <div className="space-y-2"><Label>Nama</Label><Input value={form.nama} onChange={(e) => setForm({ ...form, nama: e.target.value })} required /></div>
               <div className="space-y-2"><Label>Email</Label><Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required /></div>
+              {editingId && (
+                <p className="text-xs text-muted-foreground -mt-2">Password tidak bisa diubah langsung. Gunakan menu Reset Password jika perlu.</p>
+              )}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2"><Label>No HP</Label><Input value={form.no_hp} onChange={(e) => setForm({ ...form, no_hp: e.target.value })} required /></div>
               </div>

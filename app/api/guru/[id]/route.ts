@@ -26,10 +26,45 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const body = await req.json()
-    const data = guruSchema.parse(body)
+    const validated = guruSchema.parse(body)
+    const { nip, nama, email, no_hp, alamat, foto } = validated
 
-    const guru = await prisma.guru.update({ where: { id: params.id }, data })
-    return NextResponse.json({ data: guru })
+    const guru = await prisma.guru.findUnique({
+      where: { id: params.id },
+      include: { user: true }
+    })
+
+    if (!guru) return NextResponse.json({ error: 'Guru not found' }, { status: 404 })
+
+    if (email !== guru.email) {
+      const existingUser = await prisma.user.findFirst({
+        where: { email, id: { not: guru.user?.id || '' } }
+      })
+      if (existingUser) {
+        return NextResponse.json({ error: 'Email sudah digunakan' }, { status: 400 })
+      }
+
+      if (guru.user) {
+        await prisma.user.update({
+          where: { id: guru.user.id },
+          data: { email, name: nama }
+        })
+      }
+    }
+
+    const updatedGuru = await prisma.guru.update({
+      where: { id: params.id },
+      data: {
+        nama,
+        email,
+        no_hp,
+        alamat,
+        nip: nip || undefined,
+        foto: foto || undefined
+      }
+    })
+
+    return NextResponse.json({ data: updatedGuru })
   } catch (error) {
     console.error('PUT /api/guru/[id]:', error)
     if (error instanceof z.ZodError) return NextResponse.json({ error: formatZodErrors(error) }, { status: 400 })

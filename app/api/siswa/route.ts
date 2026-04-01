@@ -20,7 +20,7 @@ export async function GET(req: Request) {
     } : {}
 
     const [data, total] = await Promise.all([
-      prisma.siswa.findMany({ where, include: { kelas: true }, skip, take: limit, orderBy: { createdAt: 'desc' } }),
+      prisma.siswa.findMany({ where, include: { kelas: true, user: { select: { email: true } } }, skip, take: limit, orderBy: { createdAt: 'desc' } }),
       prisma.siswa.count({ where })
     ])
 

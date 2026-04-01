@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Pencil, Trash2, Plus, Search, Download } from 'lucide-react'
+import { Pencil, Trash2, Plus, Search, Download, Mail } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import * as XLSX from 'xlsx'
 import jsPDF from 'jspdf'
@@ -24,6 +24,7 @@ interface Siswa {
   tanggal_lahir: string
   alamat: string
   no_hp: string
+  email?: string
   kelas?: { id: string; nama_kelas: string } | null
 }
 
@@ -42,6 +43,7 @@ interface FormData {
   alamat: string
   no_hp: string
   kelasId: string
+  email: string
 }
 
 export default function SiswaPage() {
@@ -53,7 +55,7 @@ export default function SiswaPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState<FormData>({
-    nisn: '', nama: '', jenis_kelamin: '', tanggal_lahir: '', alamat: '', no_hp: '', kelasId: ''
+    nisn: '', nama: '', jenis_kelamin: '', tanggal_lahir: '', alamat: '', no_hp: '', kelasId: '', email: ''
   })
 
   useEffect(() => {
@@ -65,7 +67,11 @@ export default function SiswaPage() {
     try {
       const res = await fetch(`/api/siswa?page=${pagination.page}&limit=${pagination.limit}&search=${search}`)
       const json = await res.json()
-      setData(json.data || [])
+      const mapped = (json.data || []).map((s: any) => ({
+        ...s,
+        email: s.user?.email || `${s.nisn}@student.sch.id`
+      }))
+      setData(mapped)
       setPagination(json.pagination || { total: 0, page: 1, limit: 10, totalPages: 0 })
     } catch (e) { toast.error('Gagal mengambil data') }
     finally { setLoading(false) }
@@ -79,12 +85,14 @@ export default function SiswaPage() {
     } catch (e) { console.error('Error fetching kelas') }
   }
 
+  const generateEmail = (nisn: string) => `${nisn}@student.sch.id`
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     const url = editingId ? `/api/siswa/${editingId}` : '/api/siswa'
     const method = editingId ? 'PUT' : 'POST'
     
-    const payload = {
+    const payload: any = {
       nisn: form.nisn,
       nama: form.nama,
       jenis_kelamin: form.jenis_kelamin,
@@ -92,6 +100,12 @@ export default function SiswaPage() {
       alamat: form.alamat,
       no_hp: form.no_hp,
       kelasId: form.kelasId || null
+    }
+
+    if (editingId) {
+      payload.email = form.email
+    } else {
+      payload.email = form.email || generateEmail(form.nisn)
     }
     
     try {
@@ -123,7 +137,8 @@ export default function SiswaPage() {
       tanggal_lahir: tgl,
       alamat: siswa.alamat,
       no_hp: siswa.no_hp,
-      kelasId: siswa.kelas?.id || ''
+      kelasId: siswa.kelas?.id || '',
+      email: siswa.email || ''
     })
     setIsModalOpen(true)
   }
@@ -144,12 +159,12 @@ export default function SiswaPage() {
 
   const resetForm = () => {
     setEditingId(null)
-    setForm({ nisn: '', nama: '', jenis_kelamin: '', tanggal_lahir: '', alamat: '', no_hp: '', kelasId: '' })
+    setForm({ nisn: '', nama: '', jenis_kelamin: '', tanggal_lahir: '', alamat: '', no_hp: '', kelasId: '', email: '' })
   }
 
   const exportExcel = () => {
     const ws = XLSX.utils.json_to_sheet(data.map(s => ({
-      NISN: s.nisn, Nama: s.nama, 'Jenis Kelamin': s.jenis_kelamin,
+      NISN: s.nisn, Nama: s.nama, Email: s.email, 'Jenis Kelamin': s.jenis_kelamin,
       'Tanggal Lahir': s.tanggal_lahir, Alamat: s.alamat, 'No HP': s.no_hp,
       Kelas: s.kelas?.nama_kelas || '-'
     })))
@@ -162,8 +177,8 @@ export default function SiswaPage() {
     const doc = new jsPDF()
     doc.text('Data Siswa', 14, 10)
     doc.autoTable({
-      head: [['NISN', 'Nama', 'JK', 'Kelas', 'Alamat']],
-      body: data.map(s => [s.nisn, s.nama, s.jenis_kelamin, s.kelas?.nama_kelas || '-', s.alamat])
+      head: [['NISN', 'Nama', 'Email', 'JK', 'Kelas', 'Alamat']],
+      body: data.map(s => [s.nisn, s.nama, s.email, s.jenis_kelamin, s.kelas?.nama_kelas || '-', s.alamat])
     })
     doc.save('data-siswa.pdf')
   }
@@ -199,6 +214,7 @@ export default function SiswaPage() {
               <TableHead>No</TableHead>
               <TableHead>NISN</TableHead>
               <TableHead>Nama</TableHead>
+              <TableHead>Email</TableHead>
               <TableHead>JK</TableHead>
               <TableHead>Kelas</TableHead>
               <TableHead>Alamat</TableHead>
@@ -208,15 +224,21 @@ export default function SiswaPage() {
           <TableBody>
             {loading ? [...Array(5)].map((_, i) => (
               <TableRow key={i}>
-                {[...Array(7)].map((_, j) => <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>)}
+                {[...Array(8)].map((_, j) => <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>)}
               </TableRow>
             )) : data.length === 0 ? (
-              <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Tidak ada data</TableCell></TableRow>
+              <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Tidak ada data</TableCell></TableRow>
             ) : data.map((siswa, i) => (
               <TableRow key={siswa.id}>
                 <TableCell>{(pagination.page - 1) * pagination.limit + i + 1}</TableCell>
                 <TableCell className="font-mono">{siswa.nisn}</TableCell>
                 <TableCell className="font-medium">{siswa.nama}</TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-1 text-sm">
+                    <Mail className="h-3 w-3 text-muted-foreground" />
+                    <span className="truncate max-w-[180px]">{siswa.email}</span>
+                  </div>
+                </TableCell>
                 <TableCell><Badge variant={siswa.jenis_kelamin === 'L' ? 'default' : 'secondary'}>{siswa.jenis_kelamin}</Badge></TableCell>
                 <TableCell>{siswa.kelas?.nama_kelas || '-'}</TableCell>
                 <TableCell className="max-w-[200px] truncate">{siswa.alamat}</TableCell>
@@ -242,7 +264,7 @@ export default function SiswaPage() {
       </div>
 
       <Dialog open={isModalOpen} onOpenChange={(open) => { if (!open) { setIsModalOpen(false); resetForm() } }}>
-        <DialogContent>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>{editingId ? 'Edit Siswa' : 'Tambah Siswa'}</DialogTitle>
           </DialogHeader>
@@ -251,7 +273,13 @@ export default function SiswaPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>NISN</Label>
-                  <Input value={form.nisn} onChange={(e) => setForm({ ...form, nisn: e.target.value })} required maxLength={10} />
+                  <Input value={form.nisn} onChange={(e) => {
+                    const nisn = e.target.value
+                    setForm({ ...form, nisn })
+                    if (!editingId && nisn.length === 10) {
+                      setForm(prev => ({ ...prev, nisn, email: generateEmail(nisn) }))
+                    }
+                  }} required maxLength={10} />
                 </div>
                 <div className="space-y-2">
                   <Label>Jenis Kelamin</Label>
@@ -267,6 +295,22 @@ export default function SiswaPage() {
               <div className="space-y-2">
                 <Label>Nama</Label>
                 <Input value={form.nama} onChange={(e) => setForm({ ...form, nama: e.target.value })} required />
+              </div>
+              <div className="space-y-2">
+                <Label>Email Login</Label>
+                <Input
+                  type="email"
+                  value={form.email}
+                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  placeholder={editingId ? 'Email untuk login' : 'Auto dari NISN, bisa diubah'}
+                  required
+                />
+                {!editingId && form.nisn.length === 10 && (
+                  <p className="text-xs text-muted-foreground">Auto-generated: {generateEmail(form.nisn)}</p>
+                )}
+                {editingId && (
+                  <p className="text-xs text-muted-foreground">Password tidak bisa diubah langsung. Gunakan menu Reset Password jika perlu.</p>
+                )}
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">

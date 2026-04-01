@@ -30,18 +30,41 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const body = await req.json()
-    const { kelasId, tanggal_lahir, ...rest } = body
+    const { kelasId, tanggal_lahir, email, ...rest } = body
 
-    const siswa = await prisma.siswa.update({
+    const siswa = await prisma.siswa.findUnique({
       where: { id: params.id },
-      data: {
-        ...rest,
-        tanggal_lahir: tanggal_lahir ? new Date(tanggal_lahir) : undefined,
-        kelasId: kelasId || null
+      include: { user: true }
+    })
+
+    if (!siswa) return NextResponse.json({ error: 'Siswa not found' }, { status: 404 })
+
+    const updateData: any = {
+      ...rest,
+      tanggal_lahir: tanggal_lahir ? new Date(tanggal_lahir) : undefined,
+      kelasId: kelasId || null
+    }
+
+    if (email && siswa.user) {
+      const existingUser = await prisma.user.findFirst({
+        where: { email, id: { not: siswa.user.id } }
+      })
+      if (existingUser) {
+        return NextResponse.json({ error: 'Email sudah digunakan' }, { status: 400 })
       }
+
+      await prisma.user.update({
+        where: { id: siswa.user.id },
+        data: { email }
+      })
+    }
+
+    const updatedSiswa = await prisma.siswa.update({
+      where: { id: params.id },
+      data: updateData
     })
     
-    return NextResponse.json({ data: siswa })
+    return NextResponse.json({ data: updatedSiswa })
   } catch (error: any) {
     console.error('PUT /api/siswa/[id]:', error)
     if (error instanceof z.ZodError) return NextResponse.json({ error: formatZodErrors(error) }, { status: 400 })
