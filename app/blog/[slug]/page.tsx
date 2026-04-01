@@ -4,6 +4,8 @@ import Link from 'next/link'
 import { Card, CardContent } from '@/components/ui/card'
 import { ArrowLeft } from 'lucide-react'
 
+export const dynamic = 'force-dynamic'
+
 async function getPost(slug: string) {
   return await prisma.blogPost.findUnique({ where: { slug } })
 }
