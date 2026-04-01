@@ -522,33 +522,33 @@ export default function SiswaPage() {
             <p className="text-sm text-muted-foreground">{selectedSiswa.size} siswa akan dipindahkan</p>
             <div className="space-y-2">
               <Label>Kelas Tujuan <span className="text-muted-foreground font-normal">(opsional)</span></Label>
-              <Select value={transferForm.kelasId} onValueChange={(v) => setTransferForm({ ...transferForm, kelasId: v })}>
+              <Select value={transferForm.kelasId || 'none'} onValueChange={(v) => setTransferForm({ ...transferForm, kelasId: v === 'none' ? '' : v })}>
                 <SelectTrigger><SelectValue placeholder="Pilih Kelas" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Tidak diubah</SelectItem>
+                  <SelectItem value="none">Tidak diubah</SelectItem>
                   {kelas.map(k => <SelectItem key={k.id} value={k.id}>{k.nama_kelas}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
               <Label>Tahun Pelajaran <span className="text-muted-foreground font-normal">(opsional)</span></Label>
-              <Select value={transferForm.tahunPelajaranId} onValueChange={(v) => setTransferForm({ ...transferForm, tahunPelajaranId: v })}>
+              <Select value={transferForm.tahunPelajaranId || 'none'} onValueChange={(v) => setTransferForm({ ...transferForm, tahunPelajaranId: v === 'none' ? '' : v })}>
                 <SelectTrigger><SelectValue placeholder="Pilih Tahun Pelajaran" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Tidak diubah</SelectItem>
+                  <SelectItem value="none">Tidak diubah</SelectItem>
                   {tahunPelajaran.map(tp => <SelectItem key={tp.id} value={tp.id}>{tp.tahun}{tp.id === activeTP ? ' (Aktif)' : ''}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
               <Label>Catatan <span className="text-muted-foreground font-normal">(opsional)</span></Label>
-              <Select value={transferForm.catatan} onValueChange={(v) => setTransferForm({ ...transferForm, catatan: v })}>
+              <Select value={transferForm.catatan || 'none'} onValueChange={(v) => setTransferForm({ ...transferForm, catatan: v === 'none' ? '' : v })}>
                 <SelectTrigger><SelectValue placeholder="Pilih Keterangan" /></SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="none">Tanpa Keterangan</SelectItem>
                   <SelectItem value="Naik kelas">Naik Kelas</SelectItem>
                   <SelectItem value="Tinggal kelas">Tinggal Kelas</SelectItem>
                   <SelectItem value="Pindah kelas">Pindah Kelas</SelectItem>
-                  <SelectItem value="">Tanpa Keterangan</SelectItem>
                 </SelectContent>
               </Select>
             </div>
