@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton'
 import { Pencil, Trash2, Plus } from 'lucide-react'
 import { toast } from 'react-hot-toast'
+import { Pagination } from '@/components/ui/pagination-custom'
 
 interface Option { id: string; label: string }
 interface Jadwal {
@@ -22,34 +23,44 @@ interface Jadwal {
   guru: { nama: string }
 }
 
+interface PaginationState {
+  total: number
+  page: number
+  limit: number
+  totalPages: number
+}
+
 export default function JadwalPage() {
   const [data, setData] = useState<Jadwal[]>([])
   const [kelas, setKelas] = useState<Option[]>([])
   const [mapel, setMapel] = useState<Option[]>([])
   const [guru, setGuru] = useState<Option[]>([])
   const [loading, setLoading] = useState(true)
+  const [pagination, setPagination] = useState<PaginationState>({ total: 0, page: 1, limit: 10, totalPages: 0 })
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState({ kelasId: '', mapelId: '', guruId: '', hari: '', jam_mulai: '', jam_selesai: '' })
 
   const hariOptions = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu']
 
-  useEffect(() => { fetchData(); fetchOptions() }, [])
+  useEffect(() => { fetchData(); fetchOptions() }, [pagination.page])
 
   const fetchData = async () => {
+    setLoading(true)
     try {
-      const res = await fetch('/api/jadwal')
+      const res = await fetch(`/api/jadwal?page=${pagination.page}&limit=${pagination.limit}`)
       const json = await res.json()
-      setData(json.data)
+      setData(json.data || [])
+      setPagination(json.pagination || { total: 0, page: 1, limit: 10, totalPages: 0 })
     } catch { toast.error('Gagal mengambil data') }
     finally { setLoading(false) }
   }
 
   const fetchOptions = async () => {
     const [k, m, g] = await Promise.all([
-      fetch('/api/kelas').then(r => r.json()),
-      fetch('/api/mapel').then(r => r.json()),
-      fetch('/api/guru').then(r => r.json())
+      fetch('/api/kelas?limit=100').then(r => r.json()),
+      fetch('/api/mapel?limit=100').then(r => r.json()),
+      fetch('/api/guru?limit=100').then(r => r.json())
     ])
     setKelas(k.data.map((x: any) => ({ id: x.id, label: x.nama_kelas })))
     setMapel(m.data.map((x: any) => ({ id: x.id, label: x.nama_mapel })))
@@ -119,9 +130,11 @@ export default function JadwalPage() {
             <TableRow key={i}>
               {[...Array(7)].map((_, j) => <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>)}
             </TableRow>
-          )) : data.map((jadwal, i) => (
+          )) : data.length === 0 ? (
+            <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Tidak ada data</TableCell></TableRow>
+          ) : data.map((jadwal, i) => (
             <TableRow key={jadwal.id}>
-              <TableCell>{i + 1}</TableCell>
+              <TableCell>{(pagination.page - 1) * pagination.limit + i + 1}</TableCell>
               <TableCell className="font-medium">{jadwal.hari}</TableCell>
               <TableCell>{jadwal.jam_mulai} - {jadwal.jam_selesai}</TableCell>
               <TableCell>{jadwal.kelas.nama_kelas}</TableCell>
@@ -137,6 +150,8 @@ export default function JadwalPage() {
           ))}
         </TableBody>
       </Table>
+
+      <Pagination page={pagination.page} totalPages={pagination.totalPages} total={pagination.total} onPageChange={(p) => setPagination(prev => ({ ...prev, page: p }))} />
 
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent>

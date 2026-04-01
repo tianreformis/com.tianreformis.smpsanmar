@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Pencil, Trash2, Plus, Search } from 'lucide-react'
 import { toast } from 'react-hot-toast'
+import { Pagination } from '@/components/ui/pagination-custom'
 
 interface Guru {
   id: string
@@ -17,6 +18,13 @@ interface Guru {
   email: string
   no_hp: string
   alamat: string
+}
+
+interface PaginationState {
+  total: number
+  page: number
+  limit: number
+  totalPages: number
 }
 
 interface FormData {
@@ -31,17 +39,20 @@ export default function GuruPage() {
   const [data, setData] = useState<Guru[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
+  const [pagination, setPagination] = useState<PaginationState>({ total: 0, page: 1, limit: 10, totalPages: 0 })
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState<FormData>({ nip: '', nama: '', email: '', no_hp: '', alamat: '' })
 
-  useEffect(() => { fetchData() }, [])
+  useEffect(() => { fetchData() }, [pagination.page, search])
 
   const fetchData = async () => {
+    setLoading(true)
     try {
-      const res = await fetch(`/api/guru?search=${search}`)
+      const res = await fetch(`/api/guru?search=${search}&page=${pagination.page}&limit=${pagination.limit}`)
       const json = await res.json()
-      setData(json.data)
+      setData(json.data || [])
+      setPagination(json.pagination || { total: 0, page: 1, limit: 10, totalPages: 0 })
     } catch { toast.error('Gagal mengambil data') }
     finally { setLoading(false) }
   }
@@ -98,7 +109,7 @@ export default function GuruPage() {
       <div className="flex items-center gap-4">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Cari nama atau NIP..." className="pl-10" value={search} onChange={(e) => setSearch(e.target.value)} />
+          <Input placeholder="Cari nama atau NIP..." className="pl-10" value={search} onChange={(e) => { setSearch(e.target.value); setPagination(p => ({ ...p, page: 1 })) }} />
         </div>
       </div>
 
@@ -119,10 +130,12 @@ export default function GuruPage() {
             <TableRow key={i}>
               {[...Array(7)].map((_, j) => <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>)}
             </TableRow>
-          )) : data.map((guru, i) => (
+          )) : data.length === 0 ? (
+            <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Tidak ada data</TableCell></TableRow>
+          ) : data.map((guru, i) => (
             <TableRow key={guru.id}>
-              <TableCell>{i + 1}</TableCell>
-              <TableCell className="font-mono">{guru.nip}</TableCell>
+              <TableCell>{(pagination.page - 1) * pagination.limit + i + 1}</TableCell>
+              <TableCell className="font-mono">{guru.nip || '-'}</TableCell>
               <TableCell className="font-medium">{guru.nama}</TableCell>
               <TableCell>{guru.email}</TableCell>
               <TableCell>{guru.no_hp}</TableCell>
@@ -137,6 +150,8 @@ export default function GuruPage() {
           ))}
         </TableBody>
       </Table>
+
+      <Pagination page={pagination.page} totalPages={pagination.totalPages} total={pagination.total} onPageChange={(p) => setPagination(prev => ({ ...prev, page: p }))} />
 
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent>

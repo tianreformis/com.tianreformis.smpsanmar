@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton'
 import { Pencil, Trash2, Plus } from 'lucide-react'
 import { toast } from 'react-hot-toast'
+import { Pagination } from '@/components/ui/pagination-custom'
 
 interface Guru { id: string; nama: string }
 interface Mapel {
@@ -18,28 +19,38 @@ interface Mapel {
   guru?: Guru
 }
 
+interface PaginationState {
+  total: number
+  page: number
+  limit: number
+  totalPages: number
+}
+
 export default function MapelPage() {
   const [data, setData] = useState<Mapel[]>([])
   const [guru, setGuru] = useState<Guru[]>([])
   const [loading, setLoading] = useState(true)
+  const [pagination, setPagination] = useState<PaginationState>({ total: 0, page: 1, limit: 10, totalPages: 0 })
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState({ nama_mapel: '', guruId: '' })
 
-  useEffect(() => { fetchData(); fetchGuru() }, [])
+  useEffect(() => { fetchData(); fetchGuru() }, [pagination.page])
 
   const fetchData = async () => {
+    setLoading(true)
     try {
-      const res = await fetch('/api/mapel')
+      const res = await fetch(`/api/mapel?page=${pagination.page}&limit=${pagination.limit}`)
       const json = await res.json()
-      setData(json.data)
+      setData(json.data || [])
+      setPagination(json.pagination || { total: 0, page: 1, limit: 10, totalPages: 0 })
     } catch { toast.error('Gagal mengambil data') }
     finally { setLoading(false) }
   }
 
   const fetchGuru = async () => {
     try {
-      const res = await fetch('/api/guru')
+      const res = await fetch('/api/guru?limit=100')
       const json = await res.json()
       setGuru(json.data)
     } catch { console.error('Error fetching guru') }
@@ -105,9 +116,11 @@ export default function MapelPage() {
             <TableRow key={i}>
               {[...Array(4)].map((_, j) => <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>)}
             </TableRow>
-          )) : data.map((mapel, i) => (
+          )) : data.length === 0 ? (
+            <TableRow><TableCell colSpan={4} className="text-center py-8 text-muted-foreground">Tidak ada data</TableCell></TableRow>
+          ) : data.map((mapel, i) => (
             <TableRow key={mapel.id}>
-              <TableCell>{i + 1}</TableCell>
+              <TableCell>{(pagination.page - 1) * pagination.limit + i + 1}</TableCell>
               <TableCell className="font-medium">{mapel.nama_mapel}</TableCell>
               <TableCell>{mapel.guru?.nama || '-'}</TableCell>
               <TableCell>
@@ -120,6 +133,8 @@ export default function MapelPage() {
           ))}
         </TableBody>
       </Table>
+
+      <Pagination page={pagination.page} totalPages={pagination.totalPages} total={pagination.total} onPageChange={(p) => setPagination(prev => ({ ...prev, page: p }))} />
 
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent>

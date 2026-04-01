@@ -6,8 +6,9 @@ import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Check, X, Search, Filter } from 'lucide-react'
+import { Check, X } from 'lucide-react'
 import { toast } from 'react-hot-toast'
+import { Pagination } from '@/components/ui/pagination-custom'
 
 interface PPDB {
   id: string
@@ -20,19 +21,29 @@ interface PPDB {
   createdAt: string
 }
 
+interface PaginationState {
+  total: number
+  page: number
+  limit: number
+  totalPages: number
+}
+
 export default function PPDBAdminPage() {
   const [data, setData] = useState<PPDB[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('')
+  const [pagination, setPagination] = useState<PaginationState>({ total: 0, page: 1, limit: 10, totalPages: 0 })
 
-  useEffect(() => { fetchData() }, [filter])
+  useEffect(() => { fetchData() }, [filter, pagination.page])
 
   const fetchData = async () => {
+    setLoading(true)
     try {
-      const url = filter ? `/api/ppdb?status=${filter}` : '/api/ppdb'
+      const url = `/api/ppdb?status=${filter}&page=${pagination.page}&limit=${pagination.limit}`
       const res = await fetch(url)
       const json = await res.json()
-      setData(json.data)
+      setData(json.data || [])
+      setPagination(json.pagination || { total: 0, page: 1, limit: 10, totalPages: 0 })
     } catch { toast.error('Gagal mengambil data') }
     finally { setLoading(false) }
   }
@@ -61,10 +72,10 @@ export default function PPDBAdminPage() {
       </div>
 
       <div className="flex gap-2">
-        <Button variant={filter === '' ? 'default' : 'outline'} size="sm" onClick={() => setFilter('')}>Semua</Button>
-        <Button variant={filter === 'pending' ? 'default' : 'outline'} size="sm" onClick={() => setFilter('pending')}>Pending</Button>
-        <Button variant={filter === 'diterima' ? 'default' : 'outline'} size="sm" onClick={() => setFilter('diterima')}>Diterima</Button>
-        <Button variant={filter === 'ditolak' ? 'default' : 'outline'} size="sm" onClick={() => setFilter('ditolak')}>Ditolak</Button>
+        <Button variant={filter === '' ? 'default' : 'outline'} size="sm" onClick={() => { setFilter(''); setPagination(p => ({ ...p, page: 1 })) }}>Semua</Button>
+        <Button variant={filter === 'pending' ? 'default' : 'outline'} size="sm" onClick={() => { setFilter('pending'); setPagination(p => ({ ...p, page: 1 })) }}>Pending</Button>
+        <Button variant={filter === 'diterima' ? 'default' : 'outline'} size="sm" onClick={() => { setFilter('diterima'); setPagination(p => ({ ...p, page: 1 })) }}>Diterima</Button>
+        <Button variant={filter === 'ditolak' ? 'default' : 'outline'} size="sm" onClick={() => { setFilter('ditolak'); setPagination(p => ({ ...p, page: 1 })) }}>Ditolak</Button>
       </div>
 
       <Table>
@@ -84,9 +95,11 @@ export default function PPDBAdminPage() {
             <TableRow key={i}>
               {[...Array(7)].map((_, j) => <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>)}
             </TableRow>
-          )) : data.map((ppdb, i) => (
+          )) : data.length === 0 ? (
+            <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Tidak ada data pendaftar</TableCell></TableRow>
+          ) : data.map((ppdb, i) => (
             <TableRow key={ppdb.id}>
-              <TableCell>{i + 1}</TableCell>
+              <TableCell>{(pagination.page - 1) * pagination.limit + i + 1}</TableCell>
               <TableCell className="font-medium">{ppdb.nama}</TableCell>
               <TableCell className="font-mono">{ppdb.nisn}</TableCell>
               <TableCell>{ppdb.asal_sekolah}</TableCell>
@@ -113,9 +126,7 @@ export default function PPDBAdminPage() {
         </TableBody>
       </Table>
 
-      {data.length === 0 && !loading && (
-        <div className="text-center py-8 text-muted-foreground">Tidak ada data pendaftar</div>
-      )}
+      <Pagination page={pagination.page} totalPages={pagination.totalPages} total={pagination.total} onPageChange={(p) => setPagination(prev => ({ ...prev, page: p }))} />
     </div>
   )
 }

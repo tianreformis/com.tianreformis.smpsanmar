@@ -11,12 +11,20 @@ export async function GET(req: Request) {
     const session = await getServerSession(authOptions)
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const data = await prisma.kelas.findMany({
-      include: { waliKelas: true, _count: { select: { siswa: true } } },
-      orderBy: { createdAt: 'desc' }
-    })
+    const { searchParams } = new URL(req.url)
+    const page = parseInt(searchParams.get('page') || '1')
+    const limit = parseInt(searchParams.get('limit') || '10')
+    const skip = (page - 1) * limit
 
-    return NextResponse.json({ data })
+    const [data, total] = await Promise.all([
+      prisma.kelas.findMany({
+        include: { waliKelas: true, _count: { select: { siswa: true } } },
+        skip, take: limit, orderBy: { createdAt: 'desc' }
+      }),
+      prisma.kelas.count()
+    ])
+
+    return NextResponse.json({ data, pagination: { total, page, limit, totalPages: Math.ceil(total / limit) } })
   } catch (error) {
     console.error('GET /api/kelas:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

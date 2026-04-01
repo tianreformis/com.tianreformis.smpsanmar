@@ -16,16 +16,19 @@ export async function GET(req: Request) {
     }
 
     const { searchParams } = new URL(req.url)
+    const page = parseInt(searchParams.get('page') || '1')
+    const limit = parseInt(searchParams.get('limit') || '10')
     const status = searchParams.get('status')
+    const skip = (page - 1) * limit
 
     const where = status ? { status } : {}
 
-    const data = await prisma.pPDB.findMany({
-      where,
-      orderBy: { createdAt: 'desc' }
-    })
+    const [data, total] = await Promise.all([
+      prisma.pPDB.findMany({ where, skip, take: limit, orderBy: { createdAt: 'desc' } }),
+      prisma.pPDB.count({ where })
+    ])
 
-    return NextResponse.json({ data })
+    return NextResponse.json({ data, pagination: { total, page, limit, totalPages: Math.ceil(total / limit) } })
   } catch {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
