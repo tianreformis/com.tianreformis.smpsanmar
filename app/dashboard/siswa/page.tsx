@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Pencil, Trash2, Plus, Search, Download, Mail } from 'lucide-react'
+import { Pencil, Trash2, Plus, Search, Download, Mail, ArrowRightLeft, Loader2 } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import * as XLSX from 'xlsx'
 import jsPDF from 'jspdf'
@@ -61,6 +61,10 @@ export default function SiswaPage() {
   const [form, setForm] = useState<FormData>({
     nisn: '', nama: '', jenis_kelamin: '', tanggal_lahir: '', alamat: '', no_hp: '', kelasId: '', email: ''
   })
+  const [selectedSiswa, setSelectedSiswa] = useState<Set<string>>(new Set())
+  const [isTransferOpen, setIsTransferOpen] = useState(false)
+  const [transferForm, setTransferForm] = useState({ kelasId: '', tahunPelajaranId: '', catatan: '' })
+  const [isTransferring, setIsTransferring] = useState(false)
 
   useEffect(() => {
     fetchTahunPelajaran()
@@ -82,6 +86,7 @@ export default function SiswaPage() {
       }))
       setData(mapped)
       setPagination(json.pagination || { total: 0, page: 1, limit: 10, totalPages: 0 })
+      setSelectedSiswa(new Set())
     } catch (e) { toast.error('Gagal mengambil data') }
     finally { setLoading(false) }
   }
@@ -187,6 +192,51 @@ export default function SiswaPage() {
     setPagination(p => ({ ...p, page: 1 }))
   }
 
+  const toggleSelect = (id: string) => {
+    setSelectedSiswa(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const toggleSelectAll = () => {
+    if (selectedSiswa.size === data.length) {
+      setSelectedSiswa(new Set())
+    } else {
+      setSelectedSiswa(new Set(data.map(s => s.id)))
+    }
+  }
+
+  const handleTransfer = async () => {
+    if (selectedSiswa.size === 0) { toast.error('Pilih minimal 1 siswa'); return }
+    if (!transferForm.kelasId && !transferForm.tahunPelajaranId) { toast.error('Pilih kelas atau tahun pelajaran tujuan'); return }
+
+    setIsTransferring(true)
+    try {
+      const res = await fetch('/api/siswa/transfer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          siswaIds: Array.from(selectedSiswa),
+          kelasId: transferForm.kelasId || null,
+          tahunPelajaranId: transferForm.tahunPelajaranId || null,
+          catatan: transferForm.catatan || null
+        })
+      })
+      const json = await res.json()
+      if (res.ok) {
+        toast.success(json.message)
+        setIsTransferOpen(false)
+        setTransferForm({ kelasId: '', tahunPelajaranId: '', catatan: '' })
+        setSelectedSiswa(new Set())
+        fetchData()
+      } else { toast.error(typeof json.error === 'string' ? json.error : 'Gagal transfer') }
+    } catch { toast.error('Terjadi kesalahan') }
+    finally { setIsTransferring(false) }
+  }
+
   const exportExcel = () => {
     const ws = XLSX.utils.json_to_sheet(data.map(s => ({
       NISN: s.nisn, Nama: s.nama, Email: s.email, 'Jenis Kelamin': s.jenis_kelamin,
@@ -242,6 +292,16 @@ export default function SiswaPage() {
         </div>
       </div>
 
+      {selectedSiswa.size > 0 && (
+        <div className="flex items-center gap-4 p-3 bg-muted rounded-lg">
+          <span className="text-sm font-medium">{selectedSiswa.size} siswa dipilih</span>
+          <Button size="sm" variant="outline" onClick={() => setIsTransferOpen(true)}>
+            <ArrowRightLeft className="h-4 w-4 mr-2" /> Pindah/Naik Kelas
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => setSelectedSiswa(new Set())}>Batal Pilih</Button>
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="text-sm text-muted-foreground">Tampilkan</span>
@@ -264,6 +324,14 @@ export default function SiswaPage() {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-12">
+                <input
+                  type="checkbox"
+                  checked={data.length > 0 && selectedSiswa.size === data.length}
+                  onChange={toggleSelectAll}
+                  className="h-4 w-4"
+                />
+              </TableHead>
               <TableHead>No</TableHead>
               <TableHead>NISN</TableHead>
               <TableHead>Nama</TableHead>
@@ -277,12 +345,20 @@ export default function SiswaPage() {
           <TableBody>
             {loading ? [...Array(5)].map((_, i) => (
               <TableRow key={i}>
-                {[...Array(8)].map((_, j) => <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>)}
+                {[...Array(9)].map((_, j) => <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>)}
               </TableRow>
             )) : data.length === 0 ? (
-              <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Tidak ada data</TableCell></TableRow>
+              <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">Tidak ada data</TableCell></TableRow>
             ) : data.map((siswa, i) => (
-              <TableRow key={siswa.id}>
+              <TableRow key={siswa.id} className={selectedSiswa.has(siswa.id) ? 'bg-muted/50' : ''}>
+                <TableCell>
+                  <input
+                    type="checkbox"
+                    checked={selectedSiswa.has(siswa.id)}
+                    onChange={() => toggleSelect(siswa.id)}
+                    className="h-4 w-4"
+                  />
+                </TableCell>
                 <TableCell>{(pagination.page - 1) * pagination.limit + i + 1}</TableCell>
                 <TableCell className="font-mono">{siswa.nisn}</TableCell>
                 <TableCell className="font-medium">{siswa.nama}</TableCell>
@@ -433,6 +509,57 @@ export default function SiswaPage() {
               <Button type="submit">{editingId ? 'Update' : 'Simpan'}</Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Transfer Dialog */}
+      <Dialog open={isTransferOpen} onOpenChange={(open) => { if (!open) { setIsTransferOpen(false); setTransferForm({ kelasId: '', tahunPelajaranId: '', catatan: '' }) } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Pindah/Naik Kelas</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-muted-foreground">{selectedSiswa.size} siswa akan dipindahkan</p>
+            <div className="space-y-2">
+              <Label>Kelas Tujuan <span className="text-muted-foreground font-normal">(opsional)</span></Label>
+              <Select value={transferForm.kelasId} onValueChange={(v) => setTransferForm({ ...transferForm, kelasId: v })}>
+                <SelectTrigger><SelectValue placeholder="Pilih Kelas" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Tidak diubah</SelectItem>
+                  {kelas.map(k => <SelectItem key={k.id} value={k.id}>{k.nama_kelas}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Tahun Pelajaran <span className="text-muted-foreground font-normal">(opsional)</span></Label>
+              <Select value={transferForm.tahunPelajaranId} onValueChange={(v) => setTransferForm({ ...transferForm, tahunPelajaranId: v })}>
+                <SelectTrigger><SelectValue placeholder="Pilih Tahun Pelajaran" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Tidak diubah</SelectItem>
+                  {tahunPelajaran.map(tp => <SelectItem key={tp.id} value={tp.id}>{tp.tahun}{tp.id === activeTP ? ' (Aktif)' : ''}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Catatan <span className="text-muted-foreground font-normal">(opsional)</span></Label>
+              <Select value={transferForm.catatan} onValueChange={(v) => setTransferForm({ ...transferForm, catatan: v })}>
+                <SelectTrigger><SelectValue placeholder="Pilih Keterangan" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Naik kelas">Naik Kelas</SelectItem>
+                  <SelectItem value="Tinggal kelas">Tinggal Kelas</SelectItem>
+                  <SelectItem value="Pindah kelas">Pindah Kelas</SelectItem>
+                  <SelectItem value="">Tanpa Keterangan</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setIsTransferOpen(false); setTransferForm({ kelasId: '', tahunPelajaranId: '', catatan: '' }) }}>Batal</Button>
+            <Button onClick={handleTransfer} disabled={isTransferring}>
+              {isTransferring ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <ArrowRightLeft className="h-4 w-4 mr-2" />}
+              {isTransferring ? 'Memproses...' : 'Pindahkan'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
