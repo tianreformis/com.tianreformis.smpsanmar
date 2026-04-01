@@ -16,41 +16,60 @@ const ThemeContext = createContext<ThemeContextType>({
   resolvedTheme: 'light'
 })
 
+function getSystemTheme(): 'dark' | 'light' {
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+}
+
+function getResolvedTheme(saved: Theme): 'dark' | 'light' {
+  if (saved === 'system') return getSystemTheme()
+  return saved
+}
+
+function isDarkMode(theme: Theme): boolean {
+  const resolved = getResolvedTheme(theme)
+  return resolved === 'dark'
+}
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>('system')
+  const [theme, setThemeState] = useState<Theme>('system')
   const [resolvedTheme, setResolvedTheme] = useState<'dark' | 'light'>('light')
+  const [initialized, setInitialized] = useState(false)
 
   useEffect(() => {
-    const saved = localStorage.getItem('theme') as Theme
-    if (saved) setTheme(saved)
+    const saved = (localStorage.getItem('theme') as Theme) || 'system'
+    setThemeState(saved)
+
+    const isDark = getResolvedTheme(saved)
+    setResolvedTheme(isDark)
+    document.documentElement.classList.toggle('dark', isDark === 'dark')
+
+    setInitialized(true)
   }, [])
 
   useEffect(() => {
+    if (!initialized) return
+
     localStorage.setItem('theme', theme)
-    
-    const isDark = theme === 'dark' || 
-      (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
-    
-    setResolvedTheme(isDark ? 'dark' : 'light')
-    
-    if (isDark) {
-      document.documentElement.classList.add('dark')
-    } else {
-      document.documentElement.classList.remove('dark')
-    }
-  }, [theme])
+    const isDark = getResolvedTheme(theme)
+    setResolvedTheme(isDark)
+    document.documentElement.classList.toggle('dark', isDark === 'dark')
+  }, [theme, initialized])
 
   useEffect(() => {
-    if (theme === 'system') {
-      const media = window.matchMedia('(prefers-color-scheme: dark)')
-      const handler = (e: MediaQueryListEvent) => {
-        setResolvedTheme(e.matches ? 'dark' : 'light')
-        document.documentElement.classList.toggle('dark', e.matches)
-      }
-      media.addEventListener('change', handler)
-      return () => media.removeEventListener('change', handler)
+    if (theme !== 'system') return
+    const media = window.matchMedia('(prefers-color-scheme: dark)')
+    const handler = () => {
+      const isDark = getSystemTheme()
+      setResolvedTheme(isDark)
+      document.documentElement.classList.toggle('dark', isDark === 'dark')
     }
+    media.addEventListener('change', handler)
+    return () => media.removeEventListener('change', handler)
   }, [theme])
+
+  const setTheme = (newTheme: Theme) => {
+    setThemeState(newTheme)
+  }
 
   return (
     <ThemeContext.Provider value={{ theme, setTheme, resolvedTheme }}>
