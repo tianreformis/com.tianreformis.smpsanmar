@@ -140,9 +140,9 @@ async function main() {
 
   const mapelIds: Record<string, string> = {}
   for (const m of mapelList) {
-    let mapel = await prisma.mapel.findFirst({ where: { nama_mapel: m.nama, tahunPelajaranId: tp.id } })
+    let mapel = await prisma.mapel.findFirst({ where: { nama_mapel: m.nama, tahunPelajaranId: tp.id, semester: 'Ganjil' } })
     if (!mapel) {
-      mapel = await prisma.mapel.create({ data: { nama_mapel: m.nama, guruId: guruIds[m.guruIdx], tahunPelajaranId: tp.id } })
+      mapel = await prisma.mapel.create({ data: { nama_mapel: m.nama, guruId: guruIds[m.guruIdx], tahunPelajaranId: tp.id, semester: 'Ganjil' } })
     }
     mapelIds[m.nama] = mapel.id
   }
@@ -192,21 +192,27 @@ async function main() {
   }
   console.log(`Created ${allSiswa.length} siswa total`)
 
-  // Create nilai (2 mapel per siswa)
+  // Create nilai (2 mapel per siswa, multiple entries per mapel)
   const existingNilai = await prisma.nilai.findFirst()
   if (!existingNilai) {
+    const jenisNilai = ['Tugas 1', 'Tugas 2', 'UH 1', 'UTS', 'UAS']
     for (const siswa of allSiswa) {
       const mapelNames = pickRandom([['Matematika', 'Bahasa Indonesia'], ['Matematika', 'IPA'], ['Bahasa Inggris', 'IPS']])
       for (const mapelName of mapelNames) {
-        await prisma.nilai.create({
-          data: {
-            siswaId: siswa.id,
-            mapelId: mapelIds[mapelName],
-            tahunPelajaranId: tp.id,
-            nilai: randomInt(65, 98),
-            semester: pickRandom(['Ganjil', 'Genap'])
-          }
-        })
+        const semester = pickRandom(['Ganjil', 'Genap'])
+        for (const jenis of jenisNilai) {
+          await prisma.nilai.create({
+            data: {
+              siswaId: siswa.id,
+              mapelId: mapelIds[mapelName],
+              tahunPelajaranId: tp.id,
+              semester,
+              jenis,
+              nilai: randomInt(65, 98),
+              tanggal: new Date(2025, randomInt(0, 11), randomInt(1, 28))
+            }
+          })
+        }
       }
     }
     console.log('Created sample nilai')

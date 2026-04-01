@@ -8,8 +8,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Plus, Calculator } from 'lucide-react'
+import { Plus, Calculator, Trash2 } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 
 interface Option { id: string; label: string }
@@ -17,6 +18,8 @@ interface Nilai {
   id: string
   nilai: number
   semester: string
+  jenis: string
+  tanggal: string
   siswa: { nama: string }
   mapel: { nama_mapel: string }
 }
@@ -32,22 +35,46 @@ export default function NilaiPage() {
   const [data, setData] = useState<Nilai[]>([])
   const [siswa, setSiswa] = useState<Option[]>([])
   const [mapel, setMapel] = useState<Option[]>([])
+  const [tahunPelajaran, setTahunPelajaran] = useState<{ id: string; tahun: string }[]>([])
+  const [activeTP, setActiveTP] = useState<string>('')
+  const [filterTP, setFilterTP] = useState<string>('all')
   const [loading, setLoading] = useState(true)
   const [pagination, setPagination] = useState<PaginationState>({ total: 0, page: 1, limit: 10, totalPages: 0 })
   const [perPage, setPerPage] = useState(10)
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [form, setForm] = useState({ siswaId: '', mapelId: '', nilai: '', semester: '' })
+  const [form, setForm] = useState({ siswaId: '', mapelId: '', nilai: '', semester: '', jenis: '', tanggal: '' })
   const [filterSemester, setFilterSemester] = useState('')
   const [rerata, setRerata] = useState<{ semester: string; nilai: number }[]>([])
 
   const semesterOptions = ['Ganjil', 'Genap']
+  const jenisOptions = ['Tugas 1', 'Tugas 2', 'Tugas 3', 'UH 1', 'UH 2', 'UTS', 'UAS']
 
-  useEffect(() => { fetchData(); fetchOptions() }, [pagination.page, perPage, filterSemester])
+  useEffect(() => {
+    fetchTahunPelajaran()
+  }, [])
+
+  useEffect(() => { fetchData(); fetchOptions() }, [pagination.page, perPage, filterSemester, filterTP])
+
+  const fetchTahunPelajaran = async () => {
+    try {
+      const res = await fetch('/api/tahun-pelajaran')
+      const json = await res.json()
+      setTahunPelajaran(json.data || [])
+      const active = json.data?.find((tp: any) => tp.isActive)
+      if (active) {
+        setActiveTP(active.id)
+        setFilterTP(active.id)
+      }
+    } catch (e) { console.error('Error fetching tahun pelajaran') }
+  }
 
   const fetchData = async () => {
     setLoading(true)
     try {
-      const res = await fetch(`/api/nilai?page=${pagination.page}&limit=${perPage}${filterSemester ? `&semester=${filterSemester}` : ''}`)
+      let url = `/api/nilai?page=${pagination.page}&limit=${perPage}`
+      if (filterSemester) url += `&semester=${filterSemester}`
+      if (filterTP && filterTP !== 'all') url += `&tahunPelajaranId=${filterTP}`
+      const res = await fetch(url)
       const json = await res.json()
       setData(json.data || [])
       setPagination(json.pagination || { total: 0, page: 1, limit: 10, totalPages: 0 })
@@ -57,12 +84,13 @@ export default function NilaiPage() {
   }
 
   const fetchOptions = async () => {
+    const tpParam = filterTP && filterTP !== 'all' ? filterTP : activeTP
     const [s, m] = await Promise.all([
-      fetch('/api/siswa?limit=100').then(r => r.json()),
-      fetch('/api/mapel?limit=100').then(r => r.json())
+      fetch(`/api/siswa?limit=100${tpParam ? `&tahunPelajaranId=${tpParam}` : ''}`).then(r => r.json()),
+      fetch(`/api/mapel?limit=100${tpParam ? `&tahunPelajaranId=${tpParam}` : ''}`).then(r => r.json())
     ])
     setSiswa(s.data.map((x: any) => ({ id: x.id, label: x.nama })))
-    setMapel(m.data.map((x: any) => ({ id: x.id, label: x.nama_mapel })))
+    setMapel(m.data.map((x: any) => ({ id: x.id, label: `${x.nama_mapel} (${x.semester})` })))
   }
 
   const calculateRerata = (nilaiData: Nilai[]) => {
@@ -90,9 +118,20 @@ export default function NilaiPage() {
       if (res.ok) {
         toast.success('Nilai berhasil disimpan')
         setIsModalOpen(false)
-        setForm({ siswaId: '', mapelId: '', nilai: '', semester: '' })
+        setForm({ siswaId: '', mapelId: '', nilai: '', semester: '', jenis: '', tanggal: '' })
         fetchData()
       } else { toast.error(typeof json.error === 'string' ? json.error : 'Gagal menyimpan') }
+    } catch { toast.error('Terjadi kesalahan') }
+  }
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Yakin hapus nilai ini?')) return
+    try {
+      const res = await fetch(`/api/nilai?id=${id}`, { method: 'DELETE' })
+      if (res.ok) {
+        toast.success('Nilai berhasil dihapus')
+        fetchData()
+      } else { toast.error('Gagal hapus') }
     } catch { toast.error('Terjadi kesalahan') }
   }
 
@@ -146,6 +185,16 @@ export default function NilaiPage() {
             <span className="text-sm text-muted-foreground">per halaman</span>
           </div>
           <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Tahun Pelajaran:</span>
+            <Select value={filterTP} onValueChange={(v) => { setFilterTP(v); setPagination(p => ({ ...p, page: 1 })) }}>
+              <SelectTrigger className="w-40"><SelectValue placeholder="Semua" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Semua</SelectItem>
+                {tahunPelajaran.map(tp => <SelectItem key={tp.id} value={tp.id}>{tp.tahun}{tp.id === activeTP ? ' (Aktif)' : ''}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">Semester:</span>
             <Select value={filterSemester || 'all'} onValueChange={(v) => { setFilterSemester(v === 'all' ? '' : v); setPagination(p => ({ ...p, page: 1 })) }}>
               <SelectTrigger className="w-32"><SelectValue placeholder="Semua" /></SelectTrigger>
@@ -165,24 +214,32 @@ export default function NilaiPage() {
             <TableHead>No</TableHead>
             <TableHead>Siswa</TableHead>
             <TableHead>Mapel</TableHead>
+            <TableHead>Jenis</TableHead>
             <TableHead>Nilai</TableHead>
             <TableHead>Semester</TableHead>
+            <TableHead>Tanggal</TableHead>
+            <TableHead>Aksi</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {loading ? [...Array(5)].map((_, i) => (
             <TableRow key={i}>
-              {[...Array(5)].map((_, j) => <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>)}
+              {[...Array(8)].map((_, j) => <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>)}
             </TableRow>
           )) : data.length === 0 ? (
-            <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Tidak ada data</TableCell></TableRow>
+            <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Tidak ada data</TableCell></TableRow>
           ) : data.map((nilai, i) => (
             <TableRow key={nilai.id}>
               <TableCell>{(pagination.page - 1) * pagination.limit + i + 1}</TableCell>
               <TableCell className="font-medium">{nilai.siswa.nama}</TableCell>
               <TableCell>{nilai.mapel.nama_mapel}</TableCell>
+              <TableCell><Badge variant="outline">{nilai.jenis}</Badge></TableCell>
               <TableCell className="font-bold">{nilai.nilai}</TableCell>
-              <TableCell>{nilai.semester}</TableCell>
+              <TableCell><Badge variant={nilai.semester === 'Ganjil' ? 'default' : 'secondary'}>{nilai.semester}</Badge></TableCell>
+              <TableCell className="text-sm">{new Date(nilai.tanggal).toLocaleDateString('id-ID')}</TableCell>
+              <TableCell>
+                <Button size="icon" variant="ghost" onClick={() => handleDelete(nilai.id)} className="text-red-500"><Trash2 className="h-4 w-4" /></Button>
+              </TableCell>
             </TableRow>
           ))}
         </TableBody>
@@ -229,15 +286,28 @@ export default function NilaiPage() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
+                  <Label>Jenis Nilai</Label>
+                  <Select value={form.jenis} onValueChange={(v) => setForm({ ...form, jenis: v })}>
+                    <SelectTrigger><SelectValue placeholder="Pilih" /></SelectTrigger>
+                    <SelectContent>{jenisOptions.map(j => <SelectItem key={j} value={j}>{j}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
                   <Label>Nilai</Label>
                   <Input type="number" min="0" max="100" value={form.nilai} onChange={(e) => setForm({ ...form, nilai: e.target.value })} required />
                 </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Semester</Label>
                   <Select value={form.semester} onValueChange={(v) => setForm({ ...form, semester: v })}>
                     <SelectTrigger><SelectValue placeholder="Pilih" /></SelectTrigger>
                     <SelectContent>{semesterOptions.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                   </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Tanggal</Label>
+                  <Input type="date" value={form.tanggal} onChange={(e) => setForm({ ...form, tanggal: e.target.value })} />
                 </div>
               </div>
             </div>

@@ -101,6 +101,7 @@ model Mapel {
   nama_mapel        String
   tahunPelajaranId  String
   tahunPelajaran    TahunPelajaran @relation(fields: [tahunPelajaranId], references: [id])
+  semester          String // "Ganjil" or "Genap"
   guruId            String?
   guru              Guru?    @relation(fields: [guruId], references: [id])
   nilai             Nilai[]
@@ -108,7 +109,7 @@ model Mapel {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
-  @@unique([nama_mapel, tahunPelajaranId])
+  @@unique([nama_mapel, tahunPelajaranId, semester])
 }
 
 // Jadwal/Schedule
@@ -140,7 +141,9 @@ model Nilai {
   tahunPelajaranId  String
   tahunPelajaran    TahunPelajaran @relation(fields: [tahunPelajaranId], references: [id])
   semester          String // "Ganjil" or "Genap"
+  jenis             String // "Tugas 1", "UH 1", "UTS", "UAS", etc.
   nilai             Float
+  tanggal           DateTime @default(now())
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 }

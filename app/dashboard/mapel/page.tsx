@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Badge } from '@/components/ui/badge'
 import { Pencil, Trash2, Plus } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 
@@ -15,6 +16,7 @@ interface Guru { id: string; nama: string }
 interface Mapel {
   id: string
   nama_mapel: string
+  semester: string
   guru?: Guru
 }
 
@@ -36,18 +38,23 @@ export default function MapelPage() {
   const [perPage, setPerPage] = useState(10)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [form, setForm] = useState({ nama_mapel: '', guruId: '' })
+  const [form, setForm] = useState({ nama_mapel: '', guruId: '', semester: 'Ganjil' })
+  const [filterSemester, setFilterSemester] = useState('')
+  const semesterOptions = ['Ganjil', 'Genap']
 
   useEffect(() => {
     fetchTahunPelajaran()
   }, [])
 
-  useEffect(() => { fetchData(); fetchGuru() }, [pagination.page, perPage, filterTP])
+  useEffect(() => { fetchData(); fetchGuru() }, [pagination.page, perPage, filterTP, filterSemester])
 
   const fetchData = async () => {
     setLoading(true)
     try {
-      const res = await fetch(`/api/mapel?page=${pagination.page}&limit=${perPage}${filterTP && filterTP !== 'all' ? `&tahunPelajaranId=${filterTP}` : ''}`)
+      let url = `/api/mapel?page=${pagination.page}&limit=${perPage}`
+      if (filterTP && filterTP !== 'all') url += `&tahunPelajaranId=${filterTP}`
+      if (filterSemester) url += `&semester=${filterSemester}`
+      const res = await fetch(url)
       const json = await res.json()
       setData(json.data || [])
       setPagination(json.pagination || { total: 0, page: 1, limit: 10, totalPages: 0 })
@@ -92,7 +99,7 @@ export default function MapelPage() {
 
   const handleEdit = (mapel: Mapel) => {
     setEditingId(mapel.id)
-    setForm({ nama_mapel: mapel.nama_mapel, guruId: mapel.guru?.id || '' })
+    setForm({ nama_mapel: mapel.nama_mapel, guruId: mapel.guru?.id || '', semester: mapel.semester || 'Ganjil' })
     setIsModalOpen(true)
   }
 
@@ -105,7 +112,7 @@ export default function MapelPage() {
     } catch { toast.error('Gagal hapus') }
   }
 
-  const resetForm = () => { setEditingId(null); setForm({ nama_mapel: '', guruId: '' }) }
+  const resetForm = () => { setEditingId(null); setForm({ nama_mapel: '', guruId: '', semester: 'Ganjil' }) }
 
   const handlePerPageChange = (val: string) => {
     const num = parseInt(val)
@@ -151,6 +158,16 @@ export default function MapelPage() {
               </SelectContent>
             </Select>
           </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Semester:</span>
+            <Select value={filterSemester || 'all'} onValueChange={(v) => { setFilterSemester(v === 'all' ? '' : v); setPagination(p => ({ ...p, page: 1 })) }}>
+              <SelectTrigger className="w-32"><SelectValue placeholder="Semua" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Semua</SelectItem>
+                {semesterOptions.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
         <span className="text-sm text-muted-foreground">Total: {pagination.total} mapel</span>
       </div>
@@ -160,6 +177,7 @@ export default function MapelPage() {
           <TableRow>
             <TableHead>No</TableHead>
             <TableHead>Mata Pelajaran</TableHead>
+            <TableHead>Semester</TableHead>
             <TableHead>Guru Pengampu</TableHead>
             <TableHead>Aksi</TableHead>
           </TableRow>
@@ -167,14 +185,15 @@ export default function MapelPage() {
         <TableBody>
           {loading ? [...Array(5)].map((_, i) => (
             <TableRow key={i}>
-              {[...Array(4)].map((_, j) => <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>)}
+              {[...Array(5)].map((_, j) => <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>)}
             </TableRow>
           )) : data.length === 0 ? (
-            <TableRow><TableCell colSpan={4} className="text-center py-8 text-muted-foreground">Tidak ada data</TableCell></TableRow>
+            <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Tidak ada data</TableCell></TableRow>
           ) : data.map((mapel, i) => (
             <TableRow key={mapel.id}>
               <TableCell>{(pagination.page - 1) * pagination.limit + i + 1}</TableCell>
               <TableCell className="font-medium">{mapel.nama_mapel}</TableCell>
+              <TableCell><Badge variant={mapel.semester === 'Ganjil' ? 'default' : 'secondary'}>{mapel.semester}</Badge></TableCell>
               <TableCell>{mapel.guru?.nama || '-'}</TableCell>
               <TableCell>
                 <div className="flex gap-2">
@@ -213,6 +232,16 @@ export default function MapelPage() {
           <form onSubmit={handleSubmit}>
             <div className="grid gap-4 py-4">
               <div className="space-y-2"><Label>Mata Pelajaran</Label><Input value={form.nama_mapel} onChange={(e) => setForm({ ...form, nama_mapel: e.target.value })} required /></div>
+              <div className="space-y-2">
+                <Label>Semester</Label>
+                <Select value={form.semester} onValueChange={(v) => setForm({ ...form, semester: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Ganjil">Ganjil</SelectItem>
+                    <SelectItem value="Genap">Genap</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="space-y-2">
                 <Label>Guru Pengampu</Label>
                 <Select value={form.guruId} onValueChange={(v) => setForm({ ...form, guruId: v })}>
