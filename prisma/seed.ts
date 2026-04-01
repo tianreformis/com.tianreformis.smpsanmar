@@ -242,6 +242,68 @@ async function main() {
   }
   console.log('Created sample blog posts')
 
+  const blogTitles = [
+    'Kegiatan Ekstrakurikuler di SMP Santa Maria',
+    'Prestasi Siswa dalam Olimpiade Matematika Nasional',
+    'Workshop Teknologi Pembelajaran untuk Guru',
+    'Perayaan Hari Pendidikan Nasional',
+    'Program Literasi Sekolah: Membaca untuk Masa Depan',
+    'Kunjungan Studi ke Museum Nasional',
+    'Seminar Kesehatan Mental Remaja',
+    'Lomba Debat Bahasa Inggris Antar SMP',
+    'Pentas Seni Akhir Tahun 2025',
+    'Pelatihan Coding dan Robotika untuk Siswa',
+    'Bakti Sosial Siswa di Panti Asuhan',
+    'Turnamen Olahraga Antar Kelas',
+    'Program Pertukaran Pelajar dengan Sekolah Jepang',
+    'Kegiatan Pramuka dan Kepemimpinan Siswa',
+    'Festival Sains dan Teknologi Sekolah',
+    'Peringatan Hari Guru Nasional',
+    'Kegiatan Outbound dan Team Building',
+    'Program Adiwiyata: Sekolah Ramah Lingkungan',
+    'Pelatihan Public Speaking untuk Siswa',
+    'Perayaan HUT Kemerdekaan RI di Sekolah'
+  ]
+
+  const loremParagraphs = [
+    'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.',
+    'Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.',
+    'Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.',
+    'Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt. Neque porro quisquam est, qui dolorem ipsum quia dolor sit amet.',
+    'At vero eos et accusamus et iusto odio dignissimos ducimus qui blanditiis praesentium voluptatum deleniti atque corrupti quos dolores et quas molestias excepturi sint occaecati cupiditate non provident.',
+    'Similique sunt in culpa qui officia deserunt mollitia animi, id est laborum et dolorum fuga. Et harum quidem rerum facilis est et expedita distinctio. Nam libero tempore, cum soluta nobis est eligendi optio.',
+    'Temporibus autem quibusdam et aut officiis debitis aut rerum necessitatibus saepe eveniet ut et voluptates repudiandae sint et molestiae non recusandae. Itaque earum rerum hic tenetur a sapiente delectus.',
+    'Ut aut reiciendis voluptatibus maiores alias consequatur aut perferendis doloribus asperiores repellat. Quis autem vel eum iure reprehenderit qui in ea voluptate velit esse quam nihil molestiae consequatur.'
+  ]
+
+  for (let i = 0; i < blogTitles.length; i++) {
+    const existing = await prisma.blogPost.findFirst({
+      where: { slug: blogTitles[i].toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-') }
+    })
+
+    if (!existing) {
+      const numParagraphs = 3 + Math.floor(Math.random() * 3)
+      const shuffled = [...loremParagraphs].sort(() => 0.5 - Math.random())
+      const content = shuffled.slice(0, numParagraphs).join('\n\n')
+
+      const randomDays = Math.floor(Math.random() * 60)
+      const createdAt = new Date()
+      createdAt.setDate(createdAt.getDate() - randomDays)
+
+      await prisma.blogPost.create({
+        data: {
+          title: blogTitles[i],
+          slug: blogTitles[i].toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-'),
+          content,
+          status: i < 15 ? 'publish' : 'draft',
+          createdAt,
+          thumbnail: i % 3 === 0 ? `https://picsum.photos/seed/blog${i}/800/400` : undefined
+        }
+      })
+    }
+  }
+  console.log('Created 20 dummy blog posts')
+
   console.log('Seeding completed!')
 }
 
