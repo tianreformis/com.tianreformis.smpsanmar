@@ -26,7 +26,7 @@ export default async function BlogListPage() {
             <Link key={post.id} href={`/blog/${post.slug}`}>
               <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer">
                 {post.thumbnail && (
-                  <div className="aspect-video bg-gray-200 overflow-hidden">
+                  <div className="aspect-video bg-muted overflow-hidden">
                     <img src={post.thumbnail} alt={post.title} className="w-full h-full object-cover" />
                   </div>
                 )}

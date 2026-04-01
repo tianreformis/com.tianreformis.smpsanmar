@@ -7,7 +7,7 @@ export default async function PublicNavbar() {
   const session = await getServerSession(authOptions)
 
   return (
-    <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b shadow-sm">
+    <nav className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm border-b shadow-sm">
       <div className="container mx-auto px-4 py-3">
         <div className="flex items-center justify-between">
           <Link href="/blog" className="flex items-center gap-2 text-primary">

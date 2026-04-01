@@ -23,7 +23,7 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
 
       <article>
         {post.thumbnail && (
-          <div className="aspect-video bg-gray-200 rounded-lg overflow-hidden mb-8">
+          <div className="aspect-video bg-muted rounded-lg overflow-hidden mb-8">
             <img src={post.thumbnail} alt={post.title} className="w-full h-full object-cover" />
           </div>
         )}
