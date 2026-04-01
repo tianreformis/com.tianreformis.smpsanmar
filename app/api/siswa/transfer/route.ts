@@ -11,20 +11,20 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json()
-    const { siswaIds, kelasId, tahunPelajaranId, catatan } = body
+    const { siswaIds, kelasId, catatan } = body
 
     if (!siswaIds || !Array.isArray(siswaIds) || siswaIds.length === 0) {
       return NextResponse.json({ error: 'Pilih minimal 1 siswa' }, { status: 400 })
     }
 
-    // Get new kelas info
-    const newKelas = kelasId ? await prisma.kelas.findUnique({ where: { id: kelasId } }) : null
-    if (kelasId && !newKelas) {
-      return NextResponse.json({ error: 'Kelas tujuan tidak ditemukan' }, { status: 400 })
+    if (!kelasId) {
+      return NextResponse.json({ error: 'Kelas tujuan harus dipilih' }, { status: 400 })
     }
 
-    // Get old TP info
-    const oldTP = tahunPelajaranId ? await prisma.tahunPelajaran.findUnique({ where: { id: tahunPelajaranId } }) : null
+    const newKelas = await prisma.kelas.findUnique({ where: { id: kelasId } })
+    if (!newKelas) {
+      return NextResponse.json({ error: 'Kelas tujuan tidak ditemukan' }, { status: 400 })
+    }
 
     const results = []
 
@@ -32,40 +32,32 @@ export async function POST(req: Request) {
       const siswa = await prisma.siswa.findUnique({ where: { id: siswaId } })
       if (!siswa) continue
 
-      const updateData: any = {}
-      if (kelasId) updateData.kelasId = kelasId
-      if (tahunPelajaranId) updateData.tahunPelajaranId = tahunPelajaranId
+      const oldKelas = siswa.kelasId ? await prisma.kelas.findUnique({ where: { id: siswa.kelasId } }) : null
 
-      // Record class history
-      if (siswa.kelasId || siswa.tahunPelajaranId) {
-        const oldKelas = siswa.kelasId ? await prisma.kelas.findUnique({ where: { id: siswa.kelasId } }) : null
-        const newKelasRecord = kelasId ? await prisma.kelas.findUnique({ where: { id: kelasId } }) : null
-
-        await prisma.riwayatKelas.upsert({
-          where: { siswaId_tahunPelajaranId: { siswaId, tahunPelajaranId: tahunPelajaranId || siswa.tahunPelajaranId } },
-          update: {
-            kelasId: kelasId || siswa.kelasId,
-            catatan: catatan || (oldKelas?.nama_kelas === newKelasRecord?.nama_kelas ? 'Tinggal kelas' : 'Naik kelas')
-          },
-          create: {
-            siswaId,
-            kelasId: kelasId || siswa.kelasId,
-            tahunPelajaranId: tahunPelajaranId || siswa.tahunPelajaranId,
-            catatan: catatan || (oldKelas?.nama_kelas === newKelasRecord?.nama_kelas ? 'Tinggal kelas' : 'Naik kelas')
-          }
-        })
-      }
+      await prisma.riwayatKelas.upsert({
+        where: { siswaId_tahunPelajaranId: { siswaId, tahunPelajaranId: siswa.tahunPelajaranId } },
+        update: {
+          kelasId,
+          catatan: catatan || (oldKelas?.nama_kelas === newKelas?.nama_kelas ? 'Tinggal kelas' : 'Naik kelas')
+        },
+        create: {
+          siswaId,
+          kelasId,
+          tahunPelajaranId: siswa.tahunPelajaranId,
+          catatan: catatan || (oldKelas?.nama_kelas === newKelas?.nama_kelas ? 'Tinggal kelas' : 'Naik kelas')
+        }
+      })
 
       const updated = await prisma.siswa.update({
         where: { id: siswaId },
-        data: updateData
+        data: { kelasId }
       })
       results.push(updated)
     }
 
     return NextResponse.json({
       data: results,
-      message: `${results.length} siswa berhasil dipindahkan`
+      message: `${results.length} siswa berhasil dipindahkan ke ${newKelas.nama_kelas}`
     })
   } catch (error: any) {
     console.error('POST /api/siswa/transfer:', error)

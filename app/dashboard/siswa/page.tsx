@@ -48,7 +48,7 @@ interface FormData {
 
 export default function SiswaPage() {
   const [data, setData] = useState<Siswa[]>([])
-  const [kelas, setKelas] = useState<{ id: string; nama_kelas: string }[]>([])
+  const [kelas, setKelas] = useState<{ id: string; nama_kelas: string; tahunPelajaranId: string }[]>([])
   const [tahunPelajaran, setTahunPelajaran] = useState<{ id: string; tahun: string }[]>([])
   const [activeTP, setActiveTP] = useState<string>('')
   const [filterTP, setFilterTP] = useState<string>('all')
@@ -64,6 +64,7 @@ export default function SiswaPage() {
   const [selectedSiswa, setSelectedSiswa] = useState<Set<string>>(new Set())
   const [isTransferOpen, setIsTransferOpen] = useState(false)
   const [transferForm, setTransferForm] = useState({ kelasId: '', tahunPelajaranId: '', catatan: '' })
+  const [availableKelas, setAvailableKelas] = useState<{ id: string; nama_kelas: string }[]>([])
   const [isTransferring, setIsTransferring] = useState(false)
 
   useEffect(() => {
@@ -93,7 +94,7 @@ export default function SiswaPage() {
 
   const fetchKelas = async () => {
     try {
-      const res = await fetch('/api/kelas')
+      const res = await fetch('/api/kelas?limit=100')
       const json = await res.json()
       setKelas(json.data || [])
     } catch (e) { console.error('Error fetching kelas') }
@@ -211,7 +212,7 @@ export default function SiswaPage() {
 
   const handleTransfer = async () => {
     if (selectedSiswa.size === 0) { toast.error('Pilih minimal 1 siswa'); return }
-    if (!transferForm.kelasId && !transferForm.tahunPelajaranId) { toast.error('Pilih kelas atau tahun pelajaran tujuan'); return }
+    if (!transferForm.kelasId) { toast.error('Pilih kelas tujuan'); return }
 
     setIsTransferring(true)
     try {
@@ -220,8 +221,7 @@ export default function SiswaPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           siswaIds: Array.from(selectedSiswa),
-          kelasId: transferForm.kelasId || null,
-          tahunPelajaranId: transferForm.tahunPelajaranId || null,
+          kelasId: transferForm.kelasId,
           catatan: transferForm.catatan || null
         })
       })
@@ -520,26 +520,39 @@ export default function SiswaPage() {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <p className="text-sm text-muted-foreground">{selectedSiswa.size} siswa akan dipindahkan</p>
+
             <div className="space-y-2">
-              <Label>Kelas Tujuan <span className="text-muted-foreground font-normal">(opsional)</span></Label>
-              <Select value={transferForm.kelasId || 'none'} onValueChange={(v) => setTransferForm({ ...transferForm, kelasId: v === 'none' ? '' : v })}>
-                <SelectTrigger><SelectValue placeholder="Pilih Kelas" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Tidak diubah</SelectItem>
-                  {kelas.map(k => <SelectItem key={k.id} value={k.id}>{k.nama_kelas}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Tahun Pelajaran <span className="text-muted-foreground font-normal">(opsional)</span></Label>
-              <Select value={transferForm.tahunPelajaranId || 'none'} onValueChange={(v) => setTransferForm({ ...transferForm, tahunPelajaranId: v === 'none' ? '' : v })}>
+              <Label>Tahun Pelajaran</Label>
+              <Select value={transferForm.tahunPelajaranId || 'none'} onValueChange={(v) => {
+                const tpId = v === 'none' ? '' : v
+                setTransferForm({ ...transferForm, tahunPelajaranId: tpId, kelasId: '' })
+                setAvailableKelas(tpId ? kelas.filter(k => k.tahunPelajaranId === tpId).map(k => ({ id: k.id, nama_kelas: k.nama_kelas })) : [])
+              }}>
                 <SelectTrigger><SelectValue placeholder="Pilih Tahun Pelajaran" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">Tidak diubah</SelectItem>
+                  <SelectItem value="none">Pilih Tahun Pelajaran</SelectItem>
                   {tahunPelajaran.map(tp => <SelectItem key={tp.id} value={tp.id}>{tp.tahun}{tp.id === activeTP ? ' (Aktif)' : ''}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
+
+            <div className="space-y-2">
+              <Label>Kelas Tujuan</Label>
+              <Select value={transferForm.kelasId || 'none'} onValueChange={(v) => setTransferForm({ ...transferForm, kelasId: v === 'none' ? '' : v })} disabled={!transferForm.tahunPelajaranId}>
+                <SelectTrigger><SelectValue placeholder="Pilih Kelas" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Pilih Kelas</SelectItem>
+                  {availableKelas.map(k => <SelectItem key={k.id} value={k.id}>{k.nama_kelas}</SelectItem>)}
+                  {transferForm.tahunPelajaranId && availableKelas.length === 0 && (
+                    <SelectItem value="no-kelas" disabled>Belum ada kelas di tahun pelajaran ini</SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
+              {!transferForm.tahunPelajaranId && (
+                <p className="text-xs text-muted-foreground">Pilih tahun pelajaran terlebih dahulu</p>
+              )}
+            </div>
+
             <div className="space-y-2">
               <Label>Catatan <span className="text-muted-foreground font-normal">(opsional)</span></Label>
               <Select value={transferForm.catatan || 'none'} onValueChange={(v) => setTransferForm({ ...transferForm, catatan: v === 'none' ? '' : v })}>
@@ -555,7 +568,7 @@ export default function SiswaPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => { setIsTransferOpen(false); setTransferForm({ kelasId: '', tahunPelajaranId: '', catatan: '' }) }}>Batal</Button>
-            <Button onClick={handleTransfer} disabled={isTransferring}>
+            <Button onClick={handleTransfer} disabled={isTransferring || !transferForm.kelasId}>
               {isTransferring ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <ArrowRightLeft className="h-4 w-4 mr-2" />}
               {isTransferring ? 'Memproses...' : 'Pindahkan'}
             </Button>
