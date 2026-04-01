@@ -3,6 +3,36 @@ import bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient()
 
+const namaDepanL = ['Ahmad', 'Budi', 'Dimas', 'Eko', 'Fajar', 'Galih', 'Hendra', 'Irfan', 'Joko', 'Kevin', 'Luthfi', 'Muhammad', 'Naufal', 'Oscar', 'Putra', 'Rizky', 'Sandi', 'Teguh', 'Umar', 'Wahyu', 'Yoga', 'Zaki', 'Adi', 'Bayu', 'Cahya', 'Daffa', 'Farhan', 'Gilang', 'Haikal', 'Ilham']
+const namaDepanP = ['Aisyah', 'Bella', 'Citra', 'Dewi', 'Elsa', 'Fatimah', 'Gita', 'Hana', 'Indah', 'Jasmine', 'Kartika', 'Laras', 'Maya', 'Nabila', 'Olivia', 'Putri', 'Qonita', 'Rina', 'Salsabila', 'Tari', 'Umi', 'Vina', 'Wulan', 'Xena', 'Yuni', 'Zahra', 'Anisa', 'Bulan', 'Cantika', 'Dina']
+const namaBelakang = ['Pratama', 'Saputra', 'Wibowo', 'Hidayat', 'Nugroho', 'Santoso', 'Setiawan', 'Susanto', 'Purnomo', 'Kurniawan', 'Rahman', 'Firmansyah', 'Maulana', 'Ramadhan', 'Surya', 'Wijaya', 'Utama', 'Hakim', 'Pambudi', 'Lestari', 'Sari', 'Putri', 'Handayani', 'Wulandari', 'Ningsih', 'Rahayu', 'Kusuma', 'Wardani', 'Mulyani', 'Susanti']
+const jalan = ['Jl. Merdeka', 'Jl. Sudirman', 'Jl. Ahmad Yani', 'Jl. Diponegoro', 'Jl. Gatot Subroto', 'Jl. Kartini', 'Jl. Pahlawan', 'Jl. Pemuda', 'Jl. Raya', 'Jl. Melati', 'Jl. Anggrek', 'Jl. Mawar', 'Jl. Kenanga', 'Jl. Dahlia', 'Jl. Flamboyan']
+
+function randomInt(min: number, max: number) {
+  return Math.floor(Math.random() * (max - min + 1)) + min
+}
+
+function pickRandom<T>(arr: T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)]
+}
+
+function generateNama(jk: string) {
+  const depan = jk === 'L' ? pickRandom(namaDepanL) : pickRandom(namaDepanP)
+  const belakang = pickRandom(namaBelakang)
+  return `${depan} ${belakang}`
+}
+
+function generateTglLahir() {
+  const year = randomInt(2011, 2013)
+  const month = randomInt(1, 12)
+  const day = randomInt(1, 28)
+  return new Date(year, month - 1, day)
+}
+
+function generateNISN(index: number) {
+  return String(1000000000 + index).padStart(10, '0')
+}
+
 async function main() {
   console.log('Start seeding...')
 
@@ -11,240 +41,181 @@ async function main() {
   const existingAdmin = await prisma.user.findUnique({ where: { email: 'admin@sekolah.sch.id' } })
   if (!existingAdmin) {
     await prisma.user.create({
-      data: {
-        email: 'admin@sekolah.sch.id',
-        password: hashedPassword,
-        name: 'Administrator',
-        role: 'ADMIN'
-      }
+      data: { email: 'admin@sekolah.sch.id', password: hashedPassword, name: 'Administrator', role: 'ADMIN' }
     })
   }
-  console.log('Created admin: admin@sekolah.sch.id')
+  console.log('Created admin')
 
-  // Create guru
-  const guru1 = await prisma.guru.upsert({
-    where: { nip: '198501012010011001' },
-    update: {},
-    create: {
-      nip: '198501012010011001',
-      nama: 'Dr. Budi Santoso, M.Pd.',
-      email: 'budi.santoso@sekolah.sch.id',
-      no_hp: '081234567890',
-      alamat: 'Jl. Merdeka No. 10, Jakarta'
-    }
-  })
+  // Create 9 guru (6 wali kelas + 3 guru tambahan)
+  const guruData = [
+    { nip: '198501012010011001', nama: 'Drs. Bambang Suryanto, M.Pd.', email: 'bambang.suryanto@sekolah.sch.id' },
+    { nip: '198702152012012002', nama: 'Siti Aminah, S.Pd.', email: 'siti.aminah@sekolah.sch.id' },
+    { nip: '199005202015012003', nama: 'Ahmad Hidayat, S.Pd.', email: 'ahmad.hidayat@sekolah.sch.id' },
+    { nip: '198803102011011004', nama: 'Rini Wulandari, S.Pd.', email: 'rini.wulandari@sekolah.sch.id' },
+    { nip: '199106252014012005', nama: 'Dewi Sartika, S.Pd.', email: 'dewi.sartika@sekolah.sch.id' },
+    { nip: '198909122013011006', nama: 'Eko Prasetyo, S.Pd.', email: 'eko.prasetyo@sekolah.sch.id' },
+    { nip: '199204182016012007', nama: 'Nur Halimah, S.Ag.', email: 'nur.halimah@sekolah.sch.id' },
+    { nip: '198607302010011008', nama: 'Agus Setiawan, S.Pd.', email: 'agus.setiawan@sekolah.sch.id' },
+    { nip: '199311222017012009', nama: 'Fitri Rahayu, S.Pd.', email: 'fitri.rahayu@sekolah.sch.id' },
+  ]
 
-  const guru2 = await prisma.guru.upsert({
-    where: { nip: '198702152012012002' },
-    update: {},
-    create: {
-      nip: '198702152012012002',
-      nama: 'Siti Aminah, S.Pd.',
-      email: 'siti.aminah@sekolah.sch.id',
-      no_hp: '081234567891',
-      alamat: 'Jl. Sudirman No. 25, Bandung'
-    }
-  })
-
-  const guru3 = await prisma.guru.upsert({
-    where: { nip: '199005202015012003' },
-    update: {},
-    create: {
-      nip: '199005202015012003',
-      nama: 'Ahmad Hidayat, S.Si.',
-      email: 'ahmad.hidayat@sekolah.sch.id',
-      no_hp: '081234567892',
-      alamat: 'Jl. Gatot Subroto No. 30, Surabaya'
-    }
-  })
-  console.log('Created 3 guru')
-
-  // Create user for guru1
-  const existingGuruUser = await prisma.user.findUnique({ where: { email: guru1.email } })
-  if (!existingGuruUser) {
-    await prisma.user.create({
-      data: {
-        email: guru1.email,
-        password: await bcrypt.hash('guru123', 10),
-        name: guru1.nama,
-        role: 'GURU',
-        guruId: guru1.id
+  const guruIds: string[] = []
+  for (const g of guruData) {
+    const guru = await prisma.guru.upsert({
+      where: { nip: g.nip },
+      update: {},
+      create: {
+        nip: g.nip,
+        nama: g.nama,
+        email: g.email,
+        no_hp: `08${randomInt(1000000000, 9999999999)}`,
+        alamat: `${pickRandom(jalan)} No. ${randomInt(1, 50)}`
       }
     })
-  }
+    guruIds.push(guru.id)
 
-  // Create kelas
-  const kelasXIPA1 = await prisma.kelas.upsert({
-    where: { nama_kelas: 'X IPA 1' },
-    update: {},
-    create: {
-      nama_kelas: 'X IPA 1',
-      waliKelasId: guru1.id
-    }
-  })
-
-  const kelasXIPA2 = await prisma.kelas.upsert({
-    where: { nama_kelas: 'X IPA 2' },
-    update: {},
-    create: {
-      nama_kelas: 'X IPA 2',
-      waliKelasId: guru2.id
-    }
-  })
-
-  const kelasXIPS = await prisma.kelas.upsert({
-    where: { nama_kelas: 'X IPS' },
-    update: {},
-    create: {
-      nama_kelas: 'X IPS',
-      waliKelasId: guru3.id
-    }
-  })
-  console.log('Created 3 kelas')
-
-  // Create mapel using findOrCreate pattern
-  async function findOrCreateMapel(nama: string, guruId: string | null) {
-    let mapel = await prisma.mapel.findFirst({ where: { nama_mapel: nama } })
-    if (!mapel) {
-      mapel = await prisma.mapel.create({
-        data: { nama_mapel: nama, guruId }
+    const existingUser = await prisma.user.findUnique({ where: { email: g.email } })
+    if (!existingUser) {
+      await prisma.user.create({
+        data: { email: g.email, password: await bcrypt.hash('guru123', 10), name: g.nama, role: 'GURU', guruId: guru.id }
       })
     }
-    return mapel
   }
+  console.log(`Created ${guruData.length} guru`)
 
-  const mapelMatematika = await findOrCreateMapel('Matematika', guru1.id)
-  const mapelBIndo = await findOrCreateMapel('Bahasa Indonesia', guru2.id)
-  const mapelFisika = await findOrCreateMapel('Fisika', guru3.id)
-  const mapelKimia = await findOrCreateMapel('Kimia', guru1.id)
-  const mapelBiologi = await findOrCreateMapel('Biologi', guru2.id)
-  console.log('Created 5 mapel')
+  // Create 6 kelas (VII-A, VII-B, VIII-A, VIII-B, IX-A, IX-B)
+  const kelasList = [
+    { nama: 'VII-A', waliIdx: 0 },
+    { nama: 'VII-B', waliIdx: 1 },
+    { nama: 'VIII-A', waliIdx: 2 },
+    { nama: 'VIII-B', waliIdx: 3 },
+    { nama: 'IX-A', waliIdx: 4 },
+    { nama: 'IX-B', waliIdx: 5 },
+  ]
 
-  // Create siswa
-  const siswa1 = await prisma.siswa.upsert({
-    where: { nisn: '0012345678' },
-    update: {},
-    create: {
-      nisn: '0012345678',
-      nama: 'Rina Marlina',
-      jenis_kelamin: 'P',
-      tanggal_lahir: new Date('2010-03-15'),
-      alamat: 'Jl. Melati No. 5, Jakarta',
-      no_hp: '085678901234',
-      kelasId: kelasXIPA1.id
-    }
-  })
-
-  const siswa2 = await prisma.siswa.upsert({
-    where: { nisn: '0012345679' },
-    update: {},
-    create: {
-      nisn: '0012345679',
-      nama: 'Fajar Nugroho',
-      jenis_kelamin: 'L',
-      tanggal_lahir: new Date('2010-07-22'),
-      alamat: 'Jl. Anggrek No. 12, Bandung',
-      no_hp: '085678901235',
-      kelasId: kelasXIPA1.id
-    }
-  })
-
-  const siswa3 = await prisma.siswa.upsert({
-    where: { nisn: '0012345680' },
-    update: {},
-    create: {
-      nisn: '0012345680',
-      nama: 'Dewi Lestari',
-      jenis_kelamin: 'P',
-      tanggal_lahir: new Date('2010-11-08'),
-      alamat: 'Jl. Kenanga No. 8, Surabaya',
-      no_hp: '085678901236',
-      kelasId: kelasXIPA2.id
-    }
-  })
-
-  await prisma.siswa.upsert({
-    where: { nisn: '0012345681' },
-    update: {},
-    create: {
-      nisn: '0012345681',
-      nama: 'Andi Pratama',
-      jenis_kelamin: 'L',
-      tanggal_lahir: new Date('2010-05-30'),
-      alamat: 'Jl. Mawar No. 15, Semarang',
-      no_hp: '085678901237',
-      kelasId: kelasXIPS.id
-    }
-  })
-  console.log('Created 4 siswa')
-
-  // Create user for siswa
-  const existingSiswaUser = await prisma.user.findUnique({ where: { email: 'rina.marlina@student.sch.id' } })
-  if (!existingSiswaUser) {
-    await prisma.user.create({
-      data: {
-        email: 'rina.marlina@student.sch.id',
-        password: await bcrypt.hash('siswa123', 10),
-        name: siswa1.nama,
-        role: 'SISWA',
-        siswaId: siswa1.id
-      }
+  const kelasMap: Record<string, string> = {}
+  for (const k of kelasList) {
+    const kelas = await prisma.kelas.upsert({
+      where: { nama_kelas: k.nama },
+      update: { waliKelasId: guruIds[k.waliIdx] },
+      create: { nama_kelas: k.nama, waliKelasId: guruIds[k.waliIdx] }
     })
+    kelasMap[k.nama] = kelas.id
   }
+  console.log(`Created ${kelasList.length} kelas`)
 
-  // Create nilai (individual create for SQLite)
+  // Create mapel SMP
+  const mapelList = [
+    { nama: 'Matematika', guruIdx: 0 },
+    { nama: 'Bahasa Indonesia', guruIdx: 1 },
+    { nama: 'Bahasa Inggris', guruIdx: 2 },
+    { nama: 'IPA', guruIdx: 3 },
+    { nama: 'IPS', guruIdx: 4 },
+    { nama: 'PKN', guruIdx: 5 },
+    { nama: 'Pendidikan Agama Islam', guruIdx: 6 },
+    { nama: 'Seni Budaya', guruIdx: 7 },
+    { nama: 'PJOK', guruIdx: 8 },
+    { nama: 'Informatika', guruIdx: 0 },
+    { nama: 'Prakarya', guruIdx: 1 },
+  ]
+
+  const mapelIds: Record<string, string> = {}
+  for (const m of mapelList) {
+    let mapel = await prisma.mapel.findFirst({ where: { nama_mapel: m.nama } })
+    if (!mapel) {
+      mapel = await prisma.mapel.create({ data: { nama_mapel: m.nama, guruId: guruIds[m.guruIdx] } })
+    }
+    mapelIds[m.nama] = mapel.id
+  }
+  console.log(`Created ${mapelList.length} mapel`)
+
+  // Create 120 siswa (20 per kelas)
+  let siswaCounter = 0
+  const allSiswa: { id: string; nama: string; nisn: string; kelasId: string }[] = []
+
+  for (const kelasNama of Object.keys(kelasMap)) {
+    const kelasId = kelasMap[kelasNama]
+    for (let i = 0; i < 20; i++) {
+      siswaCounter++
+      const jk = i % 2 === 0 ? 'L' : 'P'
+      const nama = generateNama(jk)
+      const nisn = generateNISN(siswaCounter)
+
+      const siswa = await prisma.siswa.create({
+        data: {
+          nisn,
+          nama,
+          jenis_kelamin: jk,
+          tanggal_lahir: generateTglLahir(),
+          alamat: `${pickRandom(jalan)} No. ${randomInt(1, 100)}`,
+          no_hp: `08${randomInt(1000000000, 9999999999)}`,
+          kelasId,
+          user: {
+            create: {
+              email: `${nisn}@student.sch.id`,
+              password: await bcrypt.hash('siswa123', 10),
+              name: nama,
+              role: 'SISWA'
+            }
+          }
+        }
+      })
+      allSiswa.push({ id: siswa.id, nama, nisn, kelasId })
+    }
+    console.log(`Created 20 siswa for kelas ${kelasNama}`)
+  }
+  console.log(`Created ${allSiswa.length} siswa total`)
+
+  // Create nilai (2 mapel per siswa)
   const existingNilai = await prisma.nilai.findFirst()
   if (!existingNilai) {
-    await prisma.nilai.create({ data: { siswaId: siswa1.id, mapelId: mapelMatematika.id, nilai: 85, semester: 'Ganjil' } })
-    await prisma.nilai.create({ data: { siswaId: siswa1.id, mapelId: mapelBIndo.id, nilai: 90, semester: 'Ganjil' } })
-    await prisma.nilai.create({ data: { siswaId: siswa1.id, mapelId: mapelFisika.id, nilai: 88, semester: 'Ganjil' } })
-    await prisma.nilai.create({ data: { siswaId: siswa2.id, mapelId: mapelMatematika.id, nilai: 78, semester: 'Ganjil' } })
-    await prisma.nilai.create({ data: { siswaId: siswa2.id, mapelId: mapelBIndo.id, nilai: 82, semester: 'Ganjil' } })
-    await prisma.nilai.create({ data: { siswaId: siswa3.id, mapelId: mapelMatematika.id, nilai: 92, semester: 'Ganjil' } })
-    await prisma.nilai.create({ data: { siswaId: siswa3.id, mapelId: mapelBiologi.id, nilai: 95, semester: 'Ganjil' } })
+    for (const siswa of allSiswa) {
+      const mapelNames = pickRandom([['Matematika', 'Bahasa Indonesia'], ['Matematika', 'IPA'], ['Bahasa Inggris', 'IPS']])
+      for (const mapelName of mapelNames) {
+        await prisma.nilai.create({
+          data: {
+            siswaId: siswa.id,
+            mapelId: mapelIds[mapelName],
+            nilai: randomInt(65, 98),
+            semester: pickRandom(['Ganjil', 'Genap'])
+          }
+        })
+      }
+    }
+    console.log('Created sample nilai')
   }
-  console.log('Created sample nilai')
 
-  // Create jadwal (individual create for SQLite)
+  // Create jadwal
   const existingJadwal = await prisma.jadwal.findFirst()
   if (!existingJadwal) {
-    await prisma.jadwal.create({ data: { kelasId: kelasXIPA1.id, mapelId: mapelMatematika.id, guruId: guru1.id, hari: 'Senin', jam_mulai: '07:00', jam_selesai: '08:30' } })
-    await prisma.jadwal.create({ data: { kelasId: kelasXIPA1.id, mapelId: mapelBIndo.id, guruId: guru2.id, hari: 'Senin', jam_mulai: '08:45', jam_selesai: '10:15' } })
-    await prisma.jadwal.create({ data: { kelasId: kelasXIPA1.id, mapelId: mapelFisika.id, guruId: guru3.id, hari: 'Selasa', jam_mulai: '07:00', jam_selesai: '08:30' } })
-    await prisma.jadwal.create({ data: { kelasId: kelasXIPA1.id, mapelId: mapelKimia.id, guruId: guru1.id, hari: 'Rabu', jam_mulai: '09:00', jam_selesai: '10:30' } })
-    await prisma.jadwal.create({ data: { kelasId: kelasXIPA1.id, mapelId: mapelBiologi.id, guruId: guru2.id, hari: 'Kamis', jam_mulai: '07:00', jam_selesai: '08:30' } })
+    const hariList = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat']
+    const jamList = ['07:00', '08:30', '10:00', '11:30', '13:00']
+    const jamSelesaiList = ['08:15', '09:45', '11:15', '12:45', '14:15']
+
+    for (const kelasNama of Object.keys(kelasMap)) {
+      const kelasId = kelasMap[kelasNama]
+      const shuffledMapel = [...mapelList].sort(() => 0.5 - Math.random()).slice(0, 5)
+      for (let d = 0; d < 5; d++) {
+        const m = shuffledMapel[d]
+        await prisma.jadwal.create({
+          data: {
+            kelasId,
+            mapelId: mapelIds[m.nama],
+            guruId: guruIds[m.guruIdx],
+            hari: hariList[d],
+            jam_mulai: jamList[d],
+            jam_selesai: jamSelesaiList[d]
+          }
+        })
+      }
+    }
+    console.log('Created jadwal for all kelas')
   }
-  console.log('Created sample jadwal')
 
   // Create blog posts
-  const existingBlog = await prisma.blogPost.findFirst({ where: { slug: 'selamat-datang-di-sekolah-kami' } })
-  if (!existingBlog) {
-    await prisma.blogPost.create({
-      data: {
-        title: 'Selamat Datang di Sekolah Kami',
-        slug: 'selamat-datang-di-sekolah-kami',
-        content: 'Assalamualaikum Warahmatullahi Wabarakatuh.\n\nSelamat datang di website resmi sekolah kami. Melalui website ini, kami berharap dapat memberikan informasi yang bermanfaat bagi seluruh civitas akademika dan masyarakat umum.\n\nSekolah kami berkomitmen untuk memberikan pendidikan berkualitas yang berfokus pada pengembangan karakter dan kompetensi siswa.\n\nHormat kami,\nKepala Sekolah',
-        status: 'publish'
-      }
-    })
-  }
-
-  const existingBlog2 = await prisma.blogPost.findFirst({ where: { slug: 'pendaftaran-siswa-baru-2026' } })
-  if (!existingBlog2) {
-    await prisma.blogPost.create({
-      data: {
-        title: 'Pendaftaran Siswa Baru Tahun 2026',
-        slug: 'pendaftaran-siswa-baru-2026',
-        content: 'Pendaftaran siswa baru tahun ajaran 2026/2027 telah dibuka.\n\nPersyaratan:\n1. Usia minimal 12 tahun\n2. Lulus SD/MI\n3. Mengisi formulir pendaftaran\n4. Menyerahkan fotokopi Akta Kelahiran\n5. Menyerahkan fotokopi Kartu Keluarga\n\nPendaftaran dapat dilakukan secara online melalui website ini.',
-        status: 'publish'
-      }
-    })
-  }
-  console.log('Created sample blog posts')
-
   const blogTitles = [
     'Kegiatan Ekstrakurikuler di SMP Santa Maria',
-    'Prestasi Siswa dalam Olimpiade Matematika Nasional',
+    'Prestasi Siswa dalam Olimpiade Matematika',
     'Workshop Teknologi Pembelajaran untuk Guru',
     'Perayaan Hari Pendidikan Nasional',
     'Program Literasi Sekolah: Membaca untuk Masa Depan',
@@ -255,45 +226,42 @@ async function main() {
     'Pelatihan Coding dan Robotika untuk Siswa',
     'Bakti Sosial Siswa di Panti Asuhan',
     'Turnamen Olahraga Antar Kelas',
-    'Program Pertukaran Pelajar dengan Sekolah Jepang',
     'Kegiatan Pramuka dan Kepemimpinan Siswa',
     'Festival Sains dan Teknologi Sekolah',
     'Peringatan Hari Guru Nasional',
     'Kegiatan Outbound dan Team Building',
     'Program Adiwiyata: Sekolah Ramah Lingkungan',
     'Pelatihan Public Speaking untuk Siswa',
-    'Perayaan HUT Kemerdekaan RI di Sekolah'
+    'Perayaan HUT Kemerdekaan RI di Sekolah',
+    'Penerimaan Rapor Semester Genap'
   ]
 
   const loremParagraphs = [
     'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.',
     'Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.',
     'Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.',
-    'Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt. Neque porro quisquam est, qui dolorem ipsum quia dolor sit amet.',
+    'Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt.',
     'At vero eos et accusamus et iusto odio dignissimos ducimus qui blanditiis praesentium voluptatum deleniti atque corrupti quos dolores et quas molestias excepturi sint occaecati cupiditate non provident.',
-    'Similique sunt in culpa qui officia deserunt mollitia animi, id est laborum et dolorum fuga. Et harum quidem rerum facilis est et expedita distinctio. Nam libero tempore, cum soluta nobis est eligendi optio.',
-    'Temporibus autem quibusdam et aut officiis debitis aut rerum necessitatibus saepe eveniet ut et voluptates repudiandae sint et molestiae non recusandae. Itaque earum rerum hic tenetur a sapiente delectus.',
+    'Similique sunt in culpa qui officia deserunt mollitia animi, id est laborum et dolorum fuga. Et harum quidem rerum facilis est et expedita distinctio.',
+    'Temporibus autem quibusdam et aut officiis debitis aut rerum necessitatibus saepe eveniet ut et voluptates repudiandae sint et molestiae non recusandae.',
     'Ut aut reiciendis voluptatibus maiores alias consequatur aut perferendis doloribus asperiores repellat. Quis autem vel eum iure reprehenderit qui in ea voluptate velit esse quam nihil molestiae consequatur.'
   ]
 
   for (let i = 0; i < blogTitles.length; i++) {
-    const existing = await prisma.blogPost.findFirst({
-      where: { slug: blogTitles[i].toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-') }
-    })
-
+    const slug = blogTitles[i].toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-')
+    const existing = await prisma.blogPost.findFirst({ where: { slug } })
     if (!existing) {
-      const numParagraphs = 3 + Math.floor(Math.random() * 3)
+      const numParagraphs = 3 + randomInt(0, 2)
       const shuffled = [...loremParagraphs].sort(() => 0.5 - Math.random())
       const content = shuffled.slice(0, numParagraphs).join('\n\n')
-
-      const randomDays = Math.floor(Math.random() * 60)
+      const randomDays = randomInt(1, 60)
       const createdAt = new Date()
       createdAt.setDate(createdAt.getDate() - randomDays)
 
       await prisma.blogPost.create({
         data: {
           title: blogTitles[i],
-          slug: blogTitles[i].toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-'),
+          slug,
           content,
           status: i < 15 ? 'publish' : 'draft',
           createdAt,
