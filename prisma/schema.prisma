@@ -18,6 +18,8 @@ model User {
   siswa     Siswa?   @relation(fields: [siswaId], references: [id])
   guruId    String?  @unique
   guru      Guru?    @relation(fields: [guruId], references: [id])
+  resetRequests PasswordResetRequest[] @relation("ResetRequestUser")
+  adminRequests  PasswordResetRequest[] @relation("ResetRequestAdmin")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -143,4 +145,20 @@ model ActivityLog {
   action    String
   details   String?
   createdAt DateTime @default(now())
+}
+
+// Password Reset Request
+model PasswordResetRequest {
+  id         String   @id @default(cuid())
+  email      String
+  userId     String?
+  user       User?    @relation("ResetRequestUser", fields: [userId], references: [id])
+  reason     String?
+  status     String   @default("pending")
+  newPassword String?
+  adminNote  String?
+  adminId    String?
+  admin      User?    @relation("ResetRequestAdmin", fields: [adminId], references: [id])
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }

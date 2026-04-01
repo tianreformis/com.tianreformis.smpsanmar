@@ -7,13 +7,19 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Textarea } from '@/components/ui/textarea'
 import { toast } from 'react-hot-toast'
-import { School } from 'lucide-react'
+import { School, KeyRound, Eye, EyeOff } from 'lucide-react'
 
 export default function LoginPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [form, setForm] = useState({ email: '', password: '' })
+  const [showPassword, setShowPassword] = useState(false)
+  const [forgotOpen, setForgotOpen] = useState(false)
+  const [forgotLoading, setForgotLoading] = useState(false)
+  const [forgotForm, setForgotForm] = useState({ email: '', reason: '' })
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -37,6 +43,33 @@ export default function LoginPage() {
       toast.error('Terjadi kesalahan')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleForgotSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setForgotLoading(true)
+    
+    try {
+      const res = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(forgotForm)
+      })
+      
+      const data = await res.json()
+      
+      if (!res.ok) {
+        toast.error(data.error || 'Gagal mengirim request')
+      } else {
+        toast.success(data.message)
+        setForgotOpen(false)
+        setForgotForm({ email: '', reason: '' })
+      }
+    } catch {
+      toast.error('Terjadi kesalahan')
+    } finally {
+      setForgotLoading(false)
     }
   }
 
@@ -69,15 +102,32 @@ export default function LoginPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
-                required
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="••••••••"
+                  value={form.password}
+                  onChange={(e) => setForm({ ...form, password: e.target.value })}
+                  required
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
             </div>
+            <button
+              type="button"
+              className="text-sm text-primary hover:underline w-full text-right"
+              onClick={() => setForgotOpen(true)}
+            >
+              Lupa password?
+            </button>
           </CardContent>
           <CardFooter>
             <Button type="submit" className="w-full" disabled={loading}>
@@ -86,6 +136,57 @@ export default function LoginPage() {
           </CardFooter>
         </form>
       </Card>
+
+      <Dialog open={forgotOpen} onOpenChange={setForgotOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <KeyRound className="h-5 w-5" />
+              Lupa Password
+            </DialogTitle>
+            <DialogDescription>
+              Kirim request lupa password. Admin akan memproses dan mengatur password baru untuk Anda.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleForgotSubmit}>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="forgot-email">Email</Label>
+                <Input
+                  id="forgot-email"
+                  type="email"
+                  placeholder="Masukkan email Anda"
+                  value={forgotForm.email}
+                  onChange={(e) => setForgotForm({ ...forgotForm, email: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="forgot-reason">Alasan (opsional)</Label>
+                <Textarea
+                  id="forgot-reason"
+                  placeholder="Jelaskan alasan lupa password..."
+                  value={forgotForm.reason}
+                  onChange={(e) => setForgotForm({ ...forgotForm, reason: e.target.value })}
+                  rows={3}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setForgotOpen(false)}
+              >
+                Batal
+              </Button>
+              <Button type="submit" disabled={forgotLoading}>
+                {forgotLoading ? 'Mengirim...' : 'Kirim Request'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

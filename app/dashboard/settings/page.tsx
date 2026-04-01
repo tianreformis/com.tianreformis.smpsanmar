@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge'
 import { useTheme } from '@/components/theme-provider'
 import { useFont } from '@/components/font-provider'
 import { toast } from 'react-hot-toast'
-import { User, Palette, Type, Eye, Check, Monitor, Moon, Sun } from 'lucide-react'
+import { User, Palette, Type, Eye, EyeOff, Check, Monitor, Moon, Sun } from 'lucide-react'
 
 type FontFamily = 'poppins' | 'inter' | 'roboto-slab' | 'merriweather' | 'fira-code'
 
@@ -30,6 +30,8 @@ export default function SettingsPage() {
   const { fontFamily, setFontFamily } = useFont()
   const [loading, setLoading] = useState(false)
   const [form, setForm] = useState({ name: '', email: '', currentPassword: '', newPassword: '' })
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false)
+  const [showNewPassword, setShowNewPassword] = useState(false)
   const [previewFont, setPreviewFont] = useState<FontFamily>('poppins')
 
   useEffect(() => {
@@ -150,11 +152,21 @@ export default function SettingsPage() {
                 <form onSubmit={handleChangePassword} className="space-y-4">
                   <div className="space-y-2">
                     <Label>Password Saat Ini</Label>
-                    <Input type="password" value={form.currentPassword} onChange={(e) => setForm({ ...form, currentPassword: e.target.value })} />
+                    <div className="relative">
+                      <Input type={showCurrentPassword ? 'text' : 'password'} value={form.currentPassword} onChange={(e) => setForm({ ...form, currentPassword: e.target.value })} className="pr-10" />
+                      <button type="button" onClick={() => setShowCurrentPassword(!showCurrentPassword)} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700">
+                        {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <Label>Password Baru</Label>
-                    <Input type="password" value={form.newPassword} onChange={(e) => setForm({ ...form, newPassword: e.target.value })} />
+                    <div className="relative">
+                      <Input type={showNewPassword ? 'text' : 'password'} value={form.newPassword} onChange={(e) => setForm({ ...form, newPassword: e.target.value })} className="pr-10" />
+                      <button type="button" onClick={() => setShowNewPassword(!showNewPassword)} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700">
+                        {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
                   </div>
                   <Button type="submit" disabled={loading}>
                     {loading ? 'Menyimpan...' : 'Ubah Password'}

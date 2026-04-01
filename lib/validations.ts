@@ -75,3 +75,13 @@ export const userSchema = z.object({
   siswaId: z.string().optional(),
   guruId: z.string().optional()
 })
+
+export const forgotPasswordSchema = z.object({
+  email: z.string().email({ message: 'Email tidak valid' }),
+  reason: z.string().min(10, { message: 'Alasan minimal 10 karakter' }).optional()
+})
+
+export const resetPasswordAdminSchema = z.object({
+  newPassword: z.string().min(6, { message: 'Password minimal 6 karakter' }),
+  adminNote: z.string().min(5, { message: 'Catatan minimal 5 karakter' }).optional()
+})
