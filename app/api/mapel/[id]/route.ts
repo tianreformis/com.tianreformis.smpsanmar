@@ -26,12 +26,12 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const body = await req.json()
-    const data = mapelSchema.parse(body)
-    const { guruId, ...rest } = data
+    const { guruId, ...rest } = body
+    const data = mapelSchema.parse(rest)
 
     const mapel = await prisma.mapel.update({
       where: { id: params.id },
-      data: { ...rest, guruId: guruId || null }
+      data: { ...data, guruId: guruId || null }
     })
     return NextResponse.json({ data: mapel })
   } catch (error) {

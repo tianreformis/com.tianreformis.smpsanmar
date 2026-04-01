@@ -140,9 +140,9 @@ async function main() {
 
   const mapelIds: Record<string, string> = {}
   for (const m of mapelList) {
-    let mapel = await prisma.mapel.findFirst({ where: { nama_mapel: m.nama } })
+    let mapel = await prisma.mapel.findFirst({ where: { nama_mapel: m.nama, tahunPelajaranId: tp.id } })
     if (!mapel) {
-      mapel = await prisma.mapel.create({ data: { nama_mapel: m.nama, guruId: guruIds[m.guruIdx] } })
+      mapel = await prisma.mapel.create({ data: { nama_mapel: m.nama, guruId: guruIds[m.guruIdx], tahunPelajaranId: tp.id } })
     }
     mapelIds[m.nama] = mapel.id
   }
@@ -300,6 +300,26 @@ async function main() {
     }
   }
   console.log('Created 20 dummy blog posts')
+
+  // Create sample PPDB
+  const existingPPDB = await prisma.pPDB.findFirst()
+  if (!existingPPDB) {
+    const ppdbNames = ['Andi Pratama', 'Siti Nurhaliza', 'Budi Santoso', 'Dewi Lestari', 'Rizky Hidayat']
+    for (const nama of ppdbNames) {
+      await prisma.pPDB.create({
+        data: {
+          nama,
+          nisn: String(randomInt(1000000000, 9999999999)),
+          asal_sekolah: `SDN ${pickRandom(['01', '02', '03', '05', '07'])}`,
+          alamat: `${pickRandom(jalan)} No. ${randomInt(1, 100)}`,
+          no_hp: `08${randomInt(1000000000, 9999999999)}`,
+          status: pickRandom(['pending', 'diterima', 'ditolak']),
+          tahunPelajaranId: tp.id
+        }
+      })
+    }
+    console.log('Created sample PPDB')
+  }
 
   console.log('Seeding completed!')
 }

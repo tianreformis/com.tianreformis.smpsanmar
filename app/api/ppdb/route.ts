@@ -19,9 +19,12 @@ export async function GET(req: Request) {
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '10')
     const status = searchParams.get('status')
+    const tahunPelajaranId = searchParams.get('tahunPelajaranId') || ''
     const skip = (page - 1) * limit
 
-    const where = status ? { status } : {}
+    const where: any = {}
+    if (status) where.status = status
+    if (tahunPelajaranId) where.tahunPelajaranId = tahunPelajaranId
 
     const [data, total] = await Promise.all([
       prisma.pPDB.findMany({ where, skip, take: limit, orderBy: { createdAt: 'desc' } }),
@@ -36,14 +39,23 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const body = await req.json()
-    const data = ppdbSchema.parse(body)
+    const { tahunPelajaranId, ...rest } = body
+    const data = ppdbSchema.parse(rest)
+
+    const activeTP = tahunPelajaranId || (await prisma.tahunPelajaran.findFirst({ where: { isActive: true } }))?.id
+    if (!activeTP) return NextResponse.json({ error: 'Tidak ada tahun pelajaran aktif' }, { status: 400 })
 
     const noPendaftaran = generateNoPendaftaran()
     
     const ppdb = await prisma.pPDB.create({
-      data: { ...data, no_pendaftaran: noPendaftaran }
+      data: { ...data, no_pendaftaran: noPendaftaran, tahunPelajaranId: activeTP }
     })
+    
+    await logActivity(session.user.id, 'PPDB_REGISTER', `Pendaftaran baru: ${data.nama}`)
     
     return NextResponse.json({ data: ppdb, message: 'Pendaftaran berhasil' }, { status: 201 })
   } catch (error) {

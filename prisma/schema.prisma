@@ -16,6 +16,9 @@ model TahunPelajaran {
   kelas    Kelas[]
   jadwal   Jadwal[]
   nilai    Nilai[]
+  ppdb     PPDB[]
+  mapel    Mapel[]
+  riwayatKelas RiwayatKelas[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -53,6 +56,7 @@ model Siswa {
   kelas             Kelas?    @relation(fields: [kelasId], references: [id])
   nilai             Nilai[]
   user              User?
+  riwayatKelas      RiwayatKelas[]
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 }
@@ -84,6 +88,7 @@ model Kelas {
   waliKelas         Guru?    @relation("WaliKelas", fields: [waliKelasId], references: [id])
   siswa             Siswa[]
   jadwal            Jadwal[]
+  riwayatKelas      RiwayatKelas[]
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
@@ -92,14 +97,18 @@ model Kelas {
 
 // Mapel/Subject
 model Mapel {
-  id         String   @id @default(cuid())
-  nama_mapel String
-  guruId     String?
-  guru       Guru?    @relation(fields: [guruId], references: [id])
-  nilai      Nilai[]
-  jadwal     Jadwal[]
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id                String   @id @default(cuid())
+  nama_mapel        String
+  tahunPelajaranId  String
+  tahunPelajaran    TahunPelajaran @relation(fields: [tahunPelajaranId], references: [id])
+  guruId            String?
+  guru              Guru?    @relation(fields: [guruId], references: [id])
+  nilai             Nilai[]
+  jadwal            Jadwal[]
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([nama_mapel, tahunPelajaranId])
 }
 
 // Jadwal/Schedule
@@ -138,16 +147,33 @@ model Nilai {
 
 // PPDB (Penerimaan Siswa Baru)
 model PPDB {
-  id              String   @id @default(cuid())
-  no_pendaftaran String?
-  nama           String
-  nisn           String
-  asal_sekolah   String
-  alamat         String
-  no_hp          String
-  status         String   @default("pending")
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id                String   @id @default(cuid())
+  no_pendaftaran    String?
+  nama              String
+  nisn              String
+  asal_sekolah      String
+  alamat            String
+  no_hp             String
+  status            String   @default("pending")
+  tahunPelajaranId  String
+  tahunPelajaran    TahunPelajaran @relation(fields: [tahunPelajaranId], references: [id])
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+// Riwayat Kelas - Track student class changes across years
+model RiwayatKelas {
+  id                String   @id @default(cuid())
+  siswaId           String
+  siswa             Siswa    @relation(fields: [siswaId], references: [id])
+  kelasId           String
+  kelas             Kelas    @relation(fields: [kelasId], references: [id])
+  tahunPelajaranId  String
+  tahunPelajaran    TahunPelajaran @relation(fields: [tahunPelajaranId], references: [id])
+  catatan           String?  // e.g. "Naik kelas", "Tinggal kelas"
+  createdAt         DateTime @default(now())
+
+  @@unique([siswaId, tahunPelajaranId])
 }
 
 // BlogPost
