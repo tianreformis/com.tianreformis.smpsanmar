@@ -76,9 +76,12 @@ async function main() {
 
     const existingUser = await prisma.user.findUnique({ where: { email: g.email } })
     if (!existingUser) {
-      await prisma.user.create({
-        data: { email: g.email, password: await bcrypt.hash('guru123', 10), name: g.nama, role: 'GURU', guruId: guru.id }
-      })
+      const existingGuruUser = await prisma.user.findFirst({ where: { guruId: guru.id } })
+      if (!existingGuruUser) {
+        await prisma.user.create({
+          data: { email: g.email, password: await bcrypt.hash('guru123', 10), name: g.nama, role: 'GURU', guruId: guru.id }
+        })
+      }
     }
   }
   console.log(`Created ${guruData.length} guru`)
