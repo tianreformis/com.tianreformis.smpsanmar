@@ -98,10 +98,13 @@ async function main() {
 
   const kelasMap: Record<string, string> = {}
   for (const k of kelasList) {
-    const kelas = await prisma.kelas.upsert({
-      where: { nama_kelas: k.nama },
-      update: { waliKelasId: guruIds[k.waliIdx] },
-      create: { nama_kelas: k.nama, waliKelasId: guruIds[k.waliIdx] }
+    const existing = await prisma.kelas.findUnique({ where: { nama_kelas: k.nama } })
+    if (existing) {
+      kelasMap[k.nama] = existing.id
+      continue
+    }
+    const kelas = await prisma.kelas.create({
+      data: { nama_kelas: k.nama, waliKelasId: guruIds[k.waliIdx] }
     })
     kelasMap[k.nama] = kelas.id
   }
