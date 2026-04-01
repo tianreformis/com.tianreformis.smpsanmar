@@ -29,6 +29,9 @@ interface PaginationState {
 export default function KelasPage() {
   const [data, setData] = useState<Kelas[]>([])
   const [guru, setGuru] = useState<Guru[]>([])
+  const [tahunPelajaran, setTahunPelajaran] = useState<{ id: string; tahun: string }[]>([])
+  const [activeTP, setActiveTP] = useState<string>('')
+  const [filterTP, setFilterTP] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const [pagination, setPagination] = useState<PaginationState>({ total: 0, page: 1, limit: 10, totalPages: 0 })
   const [perPage, setPerPage] = useState(10)
@@ -36,12 +39,12 @@ export default function KelasPage() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState({ nama_kelas: '', waliKelasId: '' })
 
-  useEffect(() => { fetchData(); fetchGuru() }, [pagination.page, perPage])
+  useEffect(() => { fetchData(); fetchGuru(); fetchTahunPelajaran() }, [pagination.page, perPage, filterTP])
 
   const fetchData = async () => {
     setLoading(true)
     try {
-      const res = await fetch(`/api/kelas?page=${pagination.page}&limit=${perPage}`)
+      const res = await fetch(`/api/kelas?page=${pagination.page}&limit=${perPage}${filterTP ? `&tahunPelajaranId=${filterTP}` : ''}`)
       const json = await res.json()
       setData(json.data || [])
       setPagination(json.pagination || { total: 0, page: 1, limit: 10, totalPages: 0 })
@@ -55,6 +58,19 @@ export default function KelasPage() {
       const json = await res.json()
       setGuru(json.data)
     } catch { console.error('Error fetching guru') }
+  }
+
+  const fetchTahunPelajaran = async () => {
+    try {
+      const res = await fetch('/api/tahun-pelajaran')
+      const json = await res.json()
+      setTahunPelajaran(json.data || [])
+      const active = json.data?.find((tp: any) => tp.isActive)
+      if (active) {
+        setActiveTP(active.id)
+        setFilterTP(active.id)
+      }
+    } catch (e) { console.error('Error fetching tahun pelajaran') }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -110,19 +126,31 @@ export default function KelasPage() {
       </div>
 
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">Tampilkan</span>
-          <Select value={String(perPage)} onValueChange={handlePerPageChange}>
-            <SelectTrigger className="w-20"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="5">5</SelectItem>
-              <SelectItem value="10">10</SelectItem>
-              <SelectItem value="20">20</SelectItem>
-              <SelectItem value="50">50</SelectItem>
-              <SelectItem value="100">100</SelectItem>
-            </SelectContent>
-          </Select>
-          <span className="text-sm text-muted-foreground">per halaman</span>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Tampilkan</span>
+            <Select value={String(perPage)} onValueChange={handlePerPageChange}>
+              <SelectTrigger className="w-20"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="5">5</SelectItem>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="20">20</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+                <SelectItem value="100">100</SelectItem>
+              </SelectContent>
+            </Select>
+            <span className="text-sm text-muted-foreground">per halaman</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Tahun Pelajaran:</span>
+            <Select value={filterTP} onValueChange={(v) => { setFilterTP(v); setPagination(p => ({ ...p, page: 1 })) }}>
+              <SelectTrigger className="w-40"><SelectValue placeholder="Semua" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Semua</SelectItem>
+                {tahunPelajaran.map(tp => <SelectItem key={tp.id} value={tp.id}>{tp.tahun}{tp.id === activeTP ? ' (Aktif)' : ''}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
         <span className="text-sm text-muted-foreground">Total: {pagination.total} kelas</span>
       </div>
