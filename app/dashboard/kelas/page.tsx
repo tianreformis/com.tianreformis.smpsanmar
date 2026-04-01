@@ -73,10 +73,7 @@ export default function KelasPage() {
       const json = await res.json()
       setTahunPelajaran(json.data || [])
       const active = json.data?.find((tp: any) => tp.isActive)
-      if (active) {
-        setActiveTP(active.id)
-        setFilterTP(prev => prev === 'all' ? active.id : prev)
-      }
+      if (active) setActiveTP(active.id)
     } catch (e) { console.error('Error fetching tahun pelajaran') }
   }
 
