@@ -102,7 +102,7 @@ export default function SiswaPage() {
       const active = json.data?.find((tp: any) => tp.isActive)
       if (active) {
         setActiveTP(active.id)
-        setFilterTP(prev => prev === '' ? active.id : prev)
+        setFilterTP(prev => prev === 'all' ? active.id : prev)
       }
     } catch (e) { console.error('Error fetching tahun pelajaran') }
   }
