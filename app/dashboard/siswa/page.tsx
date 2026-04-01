@@ -50,6 +50,7 @@ export default function SiswaPage() {
   const [data, setData] = useState<Siswa[]>([])
   const [kelas, setKelas] = useState<{ id: string; nama_kelas: string }[]>([])
   const [pagination, setPagination] = useState<Pagination>({ total: 0, page: 1, limit: 10, totalPages: 0 })
+  const [perPage, setPerPage] = useState(10)
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -61,11 +62,11 @@ export default function SiswaPage() {
   useEffect(() => {
     fetchData()
     fetchKelas()
-  }, [pagination.page, search])
+  }, [pagination.page, perPage, search])
 
   const fetchData = async () => {
     try {
-      const res = await fetch(`/api/siswa?page=${pagination.page}&limit=${pagination.limit}&search=${search}`)
+      const res = await fetch(`/api/siswa?page=${pagination.page}&limit=${perPage}&search=${search}`)
       const json = await res.json()
       const mapped = (json.data || []).map((s: any) => ({
         ...s,
@@ -162,6 +163,12 @@ export default function SiswaPage() {
     setForm({ nisn: '', nama: '', jenis_kelamin: '', tanggal_lahir: '', alamat: '', no_hp: '', kelasId: '', email: '' })
   }
 
+  const handlePerPageChange = (val: string) => {
+    const num = parseInt(val)
+    setPerPage(num)
+    setPagination(p => ({ ...p, page: 1 }))
+  }
+
   const exportExcel = () => {
     const ws = XLSX.utils.json_to_sheet(data.map(s => ({
       NISN: s.nisn, Nama: s.nama, Email: s.email, 'Jenis Kelamin': s.jenis_kelamin,
@@ -205,6 +212,24 @@ export default function SiswaPage() {
           <Input placeholder="Cari nama atau NISN..." className="pl-10" value={search}
             onChange={(e) => { setSearch(e.target.value); setPagination(p => ({ ...p, page: 1 })) }} />
         </div>
+      </div>
+
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">Tampilkan</span>
+          <Select value={String(perPage)} onValueChange={handlePerPageChange}>
+            <SelectTrigger className="w-20"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="5">5</SelectItem>
+              <SelectItem value="10">10</SelectItem>
+              <SelectItem value="20">20</SelectItem>
+              <SelectItem value="50">50</SelectItem>
+              <SelectItem value="100">100</SelectItem>
+            </SelectContent>
+          </Select>
+          <span className="text-sm text-muted-foreground">per halaman</span>
+        </div>
+        <span className="text-sm text-muted-foreground">Total: {pagination.total} siswa</span>
       </div>
 
       <Card>
@@ -254,14 +279,53 @@ export default function SiswaPage() {
         </Table>
       </Card>
 
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">Total: {pagination.total} siswa</p>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" disabled={pagination.page <= 1} onClick={() => setPagination(p => ({ ...p, page: p.page - 1 }))}>Previous</Button>
-          <span className="px-4 py-2">Page {pagination.page} of {pagination.totalPages}</span>
-          <Button variant="outline" size="sm" disabled={pagination.page >= pagination.totalPages} onClick={() => setPagination(p => ({ ...p, page: p.page + 1 }))}>Next</Button>
+      {pagination.totalPages > 1 && (
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            Halaman {pagination.page} dari {pagination.totalPages}
+          </p>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={pagination.page <= 1}
+              onClick={() => setPagination(p => ({ ...p, page: p.page - 1 }))}
+            >
+              Previous
+            </Button>
+            {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
+              let pageNum: number
+              if (pagination.totalPages <= 5) {
+                pageNum = i + 1
+              } else if (pagination.page <= 3) {
+                pageNum = i + 1
+              } else if (pagination.page >= pagination.totalPages - 2) {
+                pageNum = pagination.totalPages - 4 + i
+              } else {
+                pageNum = pagination.page - 2 + i
+              }
+              return (
+                <Button
+                  key={pageNum}
+                  variant={pagination.page === pageNum ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setPagination(p => ({ ...p, page: pageNum }))}
+                >
+                  {pageNum}
+                </Button>
+              )
+            })}
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={pagination.page >= pagination.totalPages}
+              onClick={() => setPagination(p => ({ ...p, page: p.page + 1 }))}
+            >
+              Next
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
 
       <Dialog open={isModalOpen} onOpenChange={(open) => { if (!open) { setIsModalOpen(false); resetForm() } }}>
         <DialogContent className="max-w-lg">
