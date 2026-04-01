@@ -10,7 +10,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton'
 import { Pencil, Trash2, Plus } from 'lucide-react'
 import { toast } from 'react-hot-toast'
-import { Pagination } from '@/components/ui/pagination-custom'
 
 interface Option { id: string; label: string }
 interface Jadwal {
@@ -37,18 +36,19 @@ export default function JadwalPage() {
   const [guru, setGuru] = useState<Option[]>([])
   const [loading, setLoading] = useState(true)
   const [pagination, setPagination] = useState<PaginationState>({ total: 0, page: 1, limit: 10, totalPages: 0 })
+  const [perPage, setPerPage] = useState(10)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState({ kelasId: '', mapelId: '', guruId: '', hari: '', jam_mulai: '', jam_selesai: '' })
 
   const hariOptions = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu']
 
-  useEffect(() => { fetchData(); fetchOptions() }, [pagination.page])
+  useEffect(() => { fetchData(); fetchOptions() }, [pagination.page, perPage])
 
   const fetchData = async () => {
     setLoading(true)
     try {
-      const res = await fetch(`/api/jadwal?page=${pagination.page}&limit=${pagination.limit}`)
+      const res = await fetch(`/api/jadwal?page=${pagination.page}&limit=${perPage}`)
       const json = await res.json()
       setData(json.data || [])
       setPagination(json.pagination || { total: 0, page: 1, limit: 10, totalPages: 0 })
@@ -101,6 +101,12 @@ export default function JadwalPage() {
 
   const resetForm = () => { setEditingId(null); setForm({ kelasId: '', mapelId: '', guruId: '', hari: '', jam_mulai: '', jam_selesai: '' }) }
 
+  const handlePerPageChange = (val: string) => {
+    const num = parseInt(val)
+    setPerPage(num)
+    setPagination(p => ({ ...p, page: 1 }))
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -111,6 +117,24 @@ export default function JadwalPage() {
         <Button onClick={() => { resetForm(); setIsModalOpen(true) }}>
           <Plus className="h-4 w-4 mr-2" /> Tambah Jadwal
         </Button>
+      </div>
+
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">Tampilkan</span>
+          <Select value={String(perPage)} onValueChange={handlePerPageChange}>
+            <SelectTrigger className="w-20"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="5">5</SelectItem>
+              <SelectItem value="10">10</SelectItem>
+              <SelectItem value="20">20</SelectItem>
+              <SelectItem value="50">50</SelectItem>
+              <SelectItem value="100">100</SelectItem>
+            </SelectContent>
+          </Select>
+          <span className="text-sm text-muted-foreground">per halaman</span>
+        </div>
+        <span className="text-sm text-muted-foreground">Total: {pagination.total} jadwal</span>
       </div>
 
       <Table>
@@ -151,7 +175,25 @@ export default function JadwalPage() {
         </TableBody>
       </Table>
 
-      <Pagination page={pagination.page} totalPages={pagination.totalPages} total={pagination.total} onPageChange={(p) => setPagination(prev => ({ ...prev, page: p }))} />
+      {pagination.totalPages > 1 && (
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">Halaman {pagination.page} dari {pagination.totalPages}</p>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" disabled={pagination.page <= 1} onClick={() => setPagination(p => ({ ...p, page: p.page - 1 }))}>Previous</Button>
+            {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
+              let pageNum: number
+              if (pagination.totalPages <= 5) pageNum = i + 1
+              else if (pagination.page <= 3) pageNum = i + 1
+              else if (pagination.page >= pagination.totalPages - 2) pageNum = pagination.totalPages - 4 + i
+              else pageNum = pagination.page - 2 + i
+              return (
+                <Button key={pageNum} variant={pagination.page === pageNum ? 'default' : 'outline'} size="sm" onClick={() => setPagination(p => ({ ...p, page: pageNum }))}>{pageNum}</Button>
+              )
+            })}
+            <Button variant="outline" size="sm" disabled={pagination.page >= pagination.totalPages} onClick={() => setPagination(p => ({ ...p, page: p.page + 1 }))}>Next</Button>
+          </div>
+        </div>
+      )}
 
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent>

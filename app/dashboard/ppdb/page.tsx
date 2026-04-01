@@ -7,8 +7,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Check, X } from 'lucide-react'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'react-hot-toast'
-import { Pagination } from '@/components/ui/pagination-custom'
 
 interface PPDB {
   id: string
@@ -33,13 +33,14 @@ export default function PPDBAdminPage() {
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('')
   const [pagination, setPagination] = useState<PaginationState>({ total: 0, page: 1, limit: 10, totalPages: 0 })
+  const [perPage, setPerPage] = useState(10)
 
-  useEffect(() => { fetchData() }, [filter, pagination.page])
+  useEffect(() => { fetchData() }, [filter, pagination.page, perPage])
 
   const fetchData = async () => {
     setLoading(true)
     try {
-      const url = `/api/ppdb?status=${filter}&page=${pagination.page}&limit=${pagination.limit}`
+      const url = `/api/ppdb?status=${filter}&page=${pagination.page}&limit=${perPage}`
       const res = await fetch(url)
       const json = await res.json()
       setData(json.data || [])
@@ -62,6 +63,12 @@ export default function PPDBAdminPage() {
     } catch { toast.error('Terjadi kesalahan') }
   }
 
+  const handlePerPageChange = (val: string) => {
+    const num = parseInt(val)
+    setPerPage(num)
+    setPagination(p => ({ ...p, page: 1 }))
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -76,6 +83,24 @@ export default function PPDBAdminPage() {
         <Button variant={filter === 'pending' ? 'default' : 'outline'} size="sm" onClick={() => { setFilter('pending'); setPagination(p => ({ ...p, page: 1 })) }}>Pending</Button>
         <Button variant={filter === 'diterima' ? 'default' : 'outline'} size="sm" onClick={() => { setFilter('diterima'); setPagination(p => ({ ...p, page: 1 })) }}>Diterima</Button>
         <Button variant={filter === 'ditolak' ? 'default' : 'outline'} size="sm" onClick={() => { setFilter('ditolak'); setPagination(p => ({ ...p, page: 1 })) }}>Ditolak</Button>
+      </div>
+
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">Tampilkan</span>
+          <Select value={String(perPage)} onValueChange={handlePerPageChange}>
+            <SelectTrigger className="w-20"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="5">5</SelectItem>
+              <SelectItem value="10">10</SelectItem>
+              <SelectItem value="20">20</SelectItem>
+              <SelectItem value="50">50</SelectItem>
+              <SelectItem value="100">100</SelectItem>
+            </SelectContent>
+          </Select>
+          <span className="text-sm text-muted-foreground">per halaman</span>
+        </div>
+        <span className="text-sm text-muted-foreground">Total: {pagination.total} pendaftar</span>
       </div>
 
       <Table>
@@ -126,7 +151,25 @@ export default function PPDBAdminPage() {
         </TableBody>
       </Table>
 
-      <Pagination page={pagination.page} totalPages={pagination.totalPages} total={pagination.total} onPageChange={(p) => setPagination(prev => ({ ...prev, page: p }))} />
+      {pagination.totalPages > 1 && (
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">Halaman {pagination.page} dari {pagination.totalPages}</p>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" disabled={pagination.page <= 1} onClick={() => setPagination(p => ({ ...p, page: p.page - 1 }))}>Previous</Button>
+            {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
+              let pageNum: number
+              if (pagination.totalPages <= 5) pageNum = i + 1
+              else if (pagination.page <= 3) pageNum = i + 1
+              else if (pagination.page >= pagination.totalPages - 2) pageNum = pagination.totalPages - 4 + i
+              else pageNum = pagination.page - 2 + i
+              return (
+                <Button key={pageNum} variant={pagination.page === pageNum ? 'default' : 'outline'} size="sm" onClick={() => setPagination(p => ({ ...p, page: pageNum }))}>{pageNum}</Button>
+              )
+            })}
+            <Button variant="outline" size="sm" disabled={pagination.page >= pagination.totalPages} onClick={() => setPagination(p => ({ ...p, page: p.page + 1 }))}>Next</Button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
