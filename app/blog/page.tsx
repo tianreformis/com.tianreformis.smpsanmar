@@ -51,7 +51,7 @@ export default async function BlogListPage({ searchParams }: { searchParams: { p
                     <CardTitle className="line-clamp-2">{post.title}</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-muted-foreground line-clamp-3">{post.content}</p>
+                    <p className="text-muted-foreground line-clamp-3">{post.content.replace(/<[^>]*>/g, '').substring(0, 150)}...</p>
                   </CardContent>
                   <CardFooter>
                     <span className="text-sm text-muted-foreground">

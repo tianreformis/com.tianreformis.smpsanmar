@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
@@ -13,6 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Pencil, Trash2, Plus, ExternalLink, Upload, X, Image as ImageIcon, Link as LinkIcon } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import Link from 'next/link'
+import { RichTextEditor } from '@/components/rich-text-editor'
 
 interface BlogPost {
   id: string
@@ -303,7 +303,11 @@ export default function BlogPage() {
               </div>
               <div className="space-y-2">
                 <Label>Konten</Label>
-                <Textarea value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} className="min-h-[200px]" required />
+                <RichTextEditor
+                  content={form.content}
+                  onChange={(html) => setForm({ ...form, content: html })}
+                  placeholder="Tulis konten artikel di sini..."
+                />
               </div>
 
               <div className="space-y-3">
