@@ -6,9 +6,12 @@ import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Pencil, Trash2, Plus, CheckCircle } from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Pencil, Trash2, Plus, CheckCircle, RotateCw, AlertTriangle, Loader2 } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 
 interface TahunPelajaran {
@@ -18,12 +21,35 @@ interface TahunPelajaran {
   createdAt: string
 }
 
+interface Kelas {
+  id: string
+  nama_kelas: string
+  waliKelas?: { id: string; nama: string }
+}
+
+interface Guru {
+  id: string
+  nama: string
+}
+
+interface KelasMapping {
+  oldKelasId: string
+  nama: string
+  waliKelasId: string
+}
+
 export default function TahunPelajaranPage() {
   const [data, setData] = useState<TahunPelajaran[]>([])
   const [loading, setLoading] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isRollOverOpen, setIsRollOverOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState({ tahun: '', isActive: false })
+  const [kelas, setKelas] = useState<Kelas[]>([])
+  const [guru, setGuru] = useState<Guru[]>([])
+  const [kelasMappings, setKelasMappings] = useState<KelasMapping[]>([])
+  const [newTahun, setNewTahun] = useState('')
+  const [isRollingOver, setIsRollingOver] = useState(false)
 
   useEffect(() => { fetchData() }, [])
 
@@ -34,6 +60,22 @@ export default function TahunPelajaranPage() {
       setData(json.data || [])
     } catch { toast.error('Gagal mengambil data') }
     finally { setLoading(false) }
+  }
+
+  const fetchKelasAndGuru = async () => {
+    const [kRes, gRes] = await Promise.all([
+      fetch('/api/kelas?limit=100'),
+      fetch('/api/guru?limit=100')
+    ])
+    const kJson = await kRes.json()
+    const gJson = await gRes.json()
+    setKelas(kJson.data || [])
+    setGuru(gJson.data || [])
+    setKelasMappings((kJson.data || []).map((k: Kelas) => ({
+      oldKelasId: k.id,
+      nama: k.nama_kelas,
+      waliKelasId: k.waliKelas?.id || ''
+    })))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -90,17 +132,65 @@ export default function TahunPelajaranPage() {
     } catch { toast.error('Terjadi kesalahan') }
   }
 
+  const handleRollOver = async () => {
+    if (!newTahun) { toast.error('Tahun pelajaran baru harus diisi'); return }
+    if (!confirm(`Yakin roll over ke ${newTahun}? Semua siswa akan disalin ke tahun pelajaran baru.`)) return
+
+    setIsRollingOver(true)
+    try {
+      const res = await fetch('/api/tahun-pelajaran/roll-over', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ newTahun, kelasMappings })
+      })
+      const json = await res.json()
+      if (res.ok) {
+        toast.success(json.message)
+        setIsRollOverOpen(false)
+        setNewTahun('')
+        fetchData()
+      } else { toast.error(typeof json.error === 'string' ? json.error : 'Gagal roll over') }
+    } catch { toast.error('Terjadi kesalahan') }
+    finally { setIsRollingOver(false) }
+  }
+
+  const activeTP = data.find(tp => tp.isActive)
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Tahun Pelajaran</h2>
-          <p className="text-muted-foreground">Kelola tahun pelajaran aktif</p>
+          <p className="text-muted-foreground">Kelola tahun pelajaran dan roll over data</p>
         </div>
-        <Button onClick={() => { setEditingId(null); setForm({ tahun: '', isActive: false }); setIsModalOpen(true) }}>
-          <Plus className="h-4 w-4 mr-2" /> Tambah Tahun Pelajaran
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => { fetchKelasAndGuru(); setIsRollOverOpen(true) }} disabled={!activeTP}>
+            <RotateCw className="h-4 w-4 mr-2" /> Roll Over
+          </Button>
+          <Button onClick={() => { setEditingId(null); setForm({ tahun: '', isActive: false }); setIsModalOpen(true) }}>
+            <Plus className="h-4 w-4 mr-2" /> Tambah Tahun Pelajaran
+          </Button>
+        </div>
       </div>
+
+      {!activeTP && (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Belum ada tahun pelajaran aktif</AlertTitle>
+          <AlertDescription>Buat tahun pelajaran baru dan set sebagai aktif untuk mulai menggunakan sistem.</AlertDescription>
+        </Alert>
+      )}
+
+      {activeTP && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Tahun Pelajaran Aktif</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{activeTP.tahun}</div>
+          </CardContent>
+        </Card>
+      )}
 
       <Table>
         <TableHeader>
@@ -143,6 +233,7 @@ export default function TahunPelajaranPage() {
         </TableBody>
       </Table>
 
+      {/* Add/Edit Dialog */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent>
           <DialogHeader><DialogTitle>{editingId ? 'Edit Tahun Pelajaran' : 'Tambah Tahun Pelajaran'}</DialogTitle></DialogHeader>
@@ -168,6 +259,71 @@ export default function TahunPelajaranPage() {
               <Button type="submit">{editingId ? 'Update' : 'Simpan'}</Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Roll Over Dialog */}
+      <Dialog open={isRollOverOpen} onOpenChange={(open) => { if (!open) setIsRollOverOpen(false) }}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Roll Over Tahun Pelajaran</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <Alert>
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Perhatian</AlertTitle>
+              <AlertDescription>
+                Roll over akan menyalin semua siswa ke tahun pelajaran baru. Jadwal dan nilai tidak akan disalin (mulai dari awal). Guru pengampu mapel perlu ditetapkan ulang.
+              </AlertDescription>
+            </Alert>
+
+            <div className="space-y-2">
+              <Label>Tahun Pelajaran Baru</Label>
+              <Input value={newTahun} onChange={(e) => setNewTahun(e.target.value)} placeholder="Contoh: 2026/2027" />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Pemetaan Kelas & Wali Kelas</Label>
+              <p className="text-sm text-muted-foreground">Atur nama kelas dan wali kelas untuk tahun pelajaran baru</p>
+              {kelasMappings.map((mapping, i) => (
+                <div key={mapping.oldKelasId} className="flex items-center gap-2 p-2 border rounded">
+                  <span className="text-sm font-medium w-20">{kelas[i]?.nama_kelas}</span>
+                  <span className="text-muted-foreground">→</span>
+                  <Input
+                    className="w-24"
+                    value={mapping.nama}
+                    onChange={(e) => {
+                      const newMappings = [...kelasMappings]
+                      newMappings[i].nama = e.target.value
+                      setKelasMappings(newMappings)
+                    }}
+                    placeholder="Nama kelas"
+                  />
+                  <Select
+                    value={mapping.waliKelasId}
+                    onValueChange={(v) => {
+                      const newMappings = [...kelasMappings]
+                      newMappings[i].waliKelasId = v
+                      setKelasMappings(newMappings)
+                    }}
+                  >
+                    <SelectTrigger className="flex-1"><SelectValue placeholder="Wali Kelas" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Tanpa Wali Kelas</SelectItem>
+                      {guru.map(g => <SelectItem key={g.id} value={g.id}>{g.nama}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ))}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsRollOverOpen(false)}>Batal</Button>
+            <Button onClick={handleRollOver} disabled={isRollingOver || !newTahun}>
+              {isRollingOver ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RotateCw className="h-4 w-4 mr-2" />}
+              {isRollingOver ? 'Memproses...' : 'Roll Over'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
