@@ -43,7 +43,8 @@ model User {
 // Siswa/Student
 model Siswa {
   id                String    @id @default(cuid())
-  nisn              String    @unique
+  @@unique([nisn, tahunPelajaranId])
+  nisn              String
   nama              String
   jenis_kelamin     String
   tanggal_lahir     DateTime

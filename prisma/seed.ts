@@ -165,7 +165,7 @@ async function main() {
       const nama = generateNama(jk)
       const nisn = generateNISN(siswaCounter)
 
-      const existingSiswa = await prisma.siswa.findUnique({ where: { nisn } })
+      const existingSiswa = await prisma.siswa.findFirst({ where: { nisn, tahunPelajaranId: tp.id } })
       if (existingSiswa) {
         allSiswa.push({ id: existingSiswa.id, nama: existingSiswa.nama, nisn, kelasId })
         continue

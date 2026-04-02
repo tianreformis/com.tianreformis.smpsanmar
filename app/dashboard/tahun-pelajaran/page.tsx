@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Pencil, Trash2, Plus, CheckCircle, RotateCw, AlertTriangle, Loader2 } from 'lucide-react'
+import { Pencil, Trash2, Plus, CheckCircle, RotateCw, AlertTriangle, Loader2, GraduationCap } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 
 interface TahunPelajaran {
@@ -36,6 +36,7 @@ interface KelasMapping {
   oldKelasId: string
   nama: string
   waliKelasId: string
+  selected: boolean
 }
 
 export default function TahunPelajaranPage() {
@@ -74,7 +75,8 @@ export default function TahunPelajaranPage() {
     setKelasMappings((kJson.data || []).map((k: Kelas) => ({
       oldKelasId: k.id,
       nama: k.nama_kelas,
-      waliKelasId: k.waliKelas?.id || ''
+      waliKelasId: k.waliKelas?.id || '',
+      selected: true
     })))
   }
 
@@ -134,14 +136,16 @@ export default function TahunPelajaranPage() {
 
   const handleRollOver = async () => {
     if (!newTahun) { toast.error('Tahun pelajaran baru harus diisi'); return }
-    if (!confirm(`Yakin roll over ke ${newTahun}? Semua siswa akan disalin ke tahun pelajaran baru.`)) return
+    const selectedMappings = kelasMappings.filter(m => m.selected)
+    if (selectedMappings.length === 0) { toast.error('Pilih minimal satu kelas'); return }
+    if (!confirm(`Yakin roll over ke ${newTahun}? ${selectedMappings.length} kelas akan disalin.`)) return
 
     setIsRollingOver(true)
     try {
       const res = await fetch('/api/tahun-pelajaran/roll-over', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ newTahun, kelasMappings })
+        body: JSON.stringify({ newTahun, kelasMappings: selectedMappings })
       })
       const json = await res.json()
       if (res.ok) {
@@ -284,35 +288,52 @@ export default function TahunPelajaranPage() {
 
             <div className="space-y-2">
               <Label>Pemetaan Kelas & Wali Kelas</Label>
-              <p className="text-sm text-muted-foreground">Atur nama kelas dan wali kelas untuk tahun pelajaran baru</p>
+              <p className="text-sm text-muted-foreground">Centang kelas yang akan disalin ke tahun pelajaran baru. Kelas tidak dicentang = siswa lulus/alumni.</p>
               {kelasMappings.map((mapping, i) => (
-                <div key={mapping.oldKelasId} className="flex items-center gap-2 p-2 border rounded">
-                  <span className="text-sm font-medium w-20">{kelas[i]?.nama_kelas}</span>
-                  <span className="text-muted-foreground">→</span>
-                  <Input
-                    className="w-24"
-                    value={mapping.nama}
+                <div key={mapping.oldKelasId} className={`flex items-center gap-2 p-2 border rounded ${mapping.selected ? 'bg-white' : 'bg-muted/50 opacity-60'}`}>
+                  <input
+                    type="checkbox"
+                    checked={mapping.selected}
                     onChange={(e) => {
                       const newMappings = [...kelasMappings]
-                      newMappings[i].nama = e.target.value
+                      newMappings[i].selected = e.target.checked
                       setKelasMappings(newMappings)
                     }}
-                    placeholder="Nama kelas"
+                    className="h-4 w-4"
                   />
-                    <Select
-                      value={mapping.waliKelasId || 'none'}
-                      onValueChange={(v) => {
-                        const newMappings = [...kelasMappings]
-                        newMappings[i].waliKelasId = v === 'none' ? '' : v
-                        setKelasMappings(newMappings)
-                      }}
-                    >
-                      <SelectTrigger className="flex-1"><SelectValue placeholder="Wali Kelas" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Tanpa Wali Kelas</SelectItem>
-                        {guru.map(g => <SelectItem key={g.id} value={g.id}>{g.nama}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
+                  {mapping.selected ? (
+                    <>
+                      <GraduationCap className="h-4 w-4 text-green-500" />
+                      <span className="text-sm font-medium w-20">{kelas[i]?.nama_kelas}</span>
+                      <span className="text-muted-foreground">→</span>
+                      <Input
+                        className="w-24"
+                        value={mapping.nama}
+                        onChange={(e) => {
+                          const newMappings = [...kelasMappings]
+                          newMappings[i].nama = e.target.value
+                          setKelasMappings(newMappings)
+                        }}
+                        placeholder="Nama kelas"
+                      />
+                      <Select
+                        value={mapping.waliKelasId || 'none'}
+                        onValueChange={(v) => {
+                          const newMappings = [...kelasMappings]
+                          newMappings[i].waliKelasId = v === 'none' ? '' : v
+                          setKelasMappings(newMappings)
+                        }}
+                      >
+                        <SelectTrigger className="flex-1"><SelectValue placeholder="Wali Kelas" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Tanpa Wali Kelas</SelectItem>
+                          {guru.map(g => <SelectItem key={g.id} value={g.id}>{g.nama}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </>
+                  ) : (
+                    <span className="text-sm font-medium line-through text-muted-foreground">{kelas[i]?.nama_kelas} - Lulus</span>
+                  )}
                 </div>
               ))}
             </div>
