@@ -56,6 +56,14 @@ export async function PUT(
 
     const hashedPassword = await bcrypt.hash(newPassword, 10)
 
+    const adminUser = await prisma.user.findUnique({ where: { id: session.user.id } })
+    if (!adminUser) {
+      return NextResponse.json(
+        { error: 'Admin tidak ditemukan' },
+        { status: 400 }
+      )
+    }
+
     await prisma.$transaction([
       prisma.user.update({
         where: { id: request.userId },
@@ -67,7 +75,7 @@ export async function PUT(
           status: 'approved',
           newPassword,
           adminNote: adminNote || null,
-          adminId: session.user.id
+          adminId: adminUser.id
         }
       })
     ])
@@ -77,6 +85,12 @@ export async function PUT(
     })
   } catch (error) {
     console.error('PUT /api/auth/reset-password/[id]:', error)
+    if (typeof error === 'object' && error !== null && 'code' in error && (error as any).code === 'P2003') {
+      return NextResponse.json(
+        { error: 'Gagal memproses: data admin atau user tidak valid' },
+        { status: 400 }
+      )
+    }
     return NextResponse.json(
       { error: 'Terjadi kesalahan pada server' },
       { status: 500 }
@@ -116,12 +130,20 @@ export async function PATCH(
       )
     }
 
+    const adminUser = await prisma.user.findUnique({ where: { id: session.user.id } })
+    if (!adminUser) {
+      return NextResponse.json(
+        { error: 'Admin tidak ditemukan' },
+        { status: 400 }
+      )
+    }
+
     await prisma.passwordResetRequest.update({
       where: { id: requestId },
       data: {
         status: 'rejected',
         adminNote: adminNote || null,
-        adminId: session.user.id
+        adminId: adminUser.id
       }
     })
 
