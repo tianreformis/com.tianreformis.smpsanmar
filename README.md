@@ -56,6 +56,23 @@ npm run dev
 > npm run setup
 > ```
 
+## Reset Database & Reseed
+
+Jika database bermasalah atau ingin reset data ke awal:
+
+```bash
+# Hapus semua data dan buat ulang database
+npx prisma db push --force-reset
+
+# Seed ulang data sample
+npm run db:seed
+```
+
+> **Atau gunakan satu perintah:**
+> ```bash
+> npx prisma db push --force-reset && npm run db:seed
+> ```
+
 > **Buka browser:** http://localhost:3000
 
 ## Default Login

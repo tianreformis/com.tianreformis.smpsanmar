@@ -90,5 +90,5 @@ export const forgotPasswordSchema = z.object({
 
 export const resetPasswordAdminSchema = z.object({
   newPassword: z.string().min(6, { message: 'Password minimal 6 karakter' }),
-  adminNote: z.string().min(5, { message: 'Catatan minimal 5 karakter' }).optional()
+  adminNote: z.string().optional().or(z.literal(''))
 })
