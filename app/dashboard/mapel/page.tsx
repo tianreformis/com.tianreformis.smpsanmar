@@ -257,9 +257,9 @@ export default function MapelPage() {
                 <Label>Mata Pelajaran</Label>
                 <Input value={form.nama_mapel} onChange={(e) => setForm({ ...form, nama_mapel: e.target.value })} placeholder="Contoh: Matematika" required />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Kelas</Label>
+                  <Label>Kelas <span className="text-red-500">*</span></Label>
                   <Select value={form.kelasId} onValueChange={(v) => setForm({ ...form, kelasId: v })}>
                     <SelectTrigger><SelectValue placeholder="Pilih Kelas" /></SelectTrigger>
                     <SelectContent>
