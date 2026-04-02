@@ -29,6 +29,22 @@ const adminMenu = [
   { href: '/dashboard/settings', icon: Settings, label: 'Settings' },
 ]
 
+const kepalaSekolahMenu = [
+  { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+  { href: '/dashboard/siswa', icon: GraduationCap, label: 'Siswa' },
+  { href: '/dashboard/guru', icon: Users, label: 'Guru' },
+  { href: '/dashboard/kelas', icon: School, label: 'Kelas' },
+  { href: '/dashboard/mapel', icon: BookOpen, label: 'Mapel' },
+  { href: '/dashboard/jadwal', icon: Calendar, label: 'Jadwal' },
+  { href: '/dashboard/nilai', icon: FileText, label: 'Nilai' },
+  { href: '/dashboard/ppdb', icon: ClipboardList, label: 'PPDB' },
+  { href: '/dashboard/blog', icon: Newspaper, label: 'Blog' },
+  { href: '/dashboard/tahun-pelajaran', icon: CalendarDays, label: 'Tahun Pelajaran' },
+  { href: '/dashboard/reset-password', icon: KeyRound, label: 'Reset Password' },
+  { href: '/dashboard/admin-management', icon: Users, label: 'Manajemen Admin' },
+  { href: '/dashboard/settings', icon: Settings, label: 'Settings' },
+]
+
 const guruMenu = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { href: '/dashboard/kelas', icon: School, label: 'Kelas' },
@@ -45,7 +61,7 @@ const siswaMenu = [
 
 export function DashboardSidebar({ role }: SidebarProps) {
   const pathname = usePathname()
-  const menu = role === 'ADMIN' ? adminMenu : role === 'GURU' ? guruMenu : siswaMenu
+  const menu = role === 'ADMIN' ? adminMenu : role === 'KEPALA_SEKOLAH' ? kepalaSekolahMenu : role === 'GURU' ? guruMenu : siswaMenu
 
   return (
     <>

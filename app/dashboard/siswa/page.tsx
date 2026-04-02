@@ -24,8 +24,8 @@ interface Siswa {
   tanggal_lahir: string
   alamat: string
   no_hp: string
-  email?: string
   kelas?: { id: string; nama_kelas: string } | null
+  user?: { email: string } | null
 }
 
 interface Pagination {
@@ -163,7 +163,7 @@ export default function SiswaPage() {
       alamat: siswa.alamat,
       no_hp: siswa.no_hp,
       kelasId: siswa.kelas?.id || '',
-      email: siswa.email || ''
+      email: siswa.user?.email || ''
     })
     setIsModalOpen(true)
   }
@@ -239,7 +239,7 @@ export default function SiswaPage() {
 
   const exportExcel = () => {
     const ws = XLSX.utils.json_to_sheet(data.map(s => ({
-      NISN: s.nisn, Nama: s.nama, Email: s.email, 'Jenis Kelamin': s.jenis_kelamin,
+      NISN: s.nisn, Nama: s.nama, Email: s.user?.email, 'Jenis Kelamin': s.jenis_kelamin,
       'Tanggal Lahir': s.tanggal_lahir, Alamat: s.alamat, 'No HP': s.no_hp,
       Kelas: s.kelas?.nama_kelas || '-'
     })))
@@ -253,7 +253,7 @@ export default function SiswaPage() {
     doc.text('Data Siswa', 14, 10)
     doc.autoTable({
       head: [['NISN', 'Nama', 'Email', 'JK', 'Kelas', 'Alamat']],
-      body: data.map(s => [s.nisn, s.nama, s.email, s.jenis_kelamin, s.kelas?.nama_kelas || '-', s.alamat])
+      body: data.map(s => [s.nisn, s.nama, s.user?.email, s.jenis_kelamin, s.kelas?.nama_kelas || '-', s.alamat])
     })
     doc.save('data-siswa.pdf')
   }
@@ -365,7 +365,7 @@ export default function SiswaPage() {
                 <TableCell>
                   <div className="flex items-center gap-1 text-sm">
                     <Mail className="h-3 w-3 text-muted-foreground" />
-                    <span className="truncate max-w-[180px]">{siswa.email}</span>
+                    <span className="truncate max-w-[180px]">{siswa.user?.email || '-'}</span>
                   </div>
                 </TableCell>
                 <TableCell><Badge variant={siswa.jenis_kelamin === 'L' ? 'default' : 'secondary'}>{siswa.jenis_kelamin}</Badge></TableCell>

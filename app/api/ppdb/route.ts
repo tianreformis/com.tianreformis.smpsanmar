@@ -11,7 +11,7 @@ import { formatZodErrors } from '@/lib/error-handler'
 export async function GET(req: Request) {
   try {
     const session = await getServerSession(authOptions)
-    if (!session || session.user.role !== 'ADMIN') {
+    if (!session || !['ADMIN', 'KEPALA_SEKOLAH'].includes(session.user.role)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 

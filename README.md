@@ -77,11 +77,12 @@ npm run db:seed
 
 ## Default Login
 
-| Role  | Email                        | Password   |
-|-------|------------------------------|------------|
-| Admin | admin@sekolah.sch.id         | admin123   |
-| Guru  | budi.santoso@sekolah.sch.id | guru123    |
-| Siswa | rina.marlina@student.sch.id | siswa123   |
+| Role         | Email                          | Password   |
+|--------------|--------------------------------|------------|
+| Admin        | admin@sekolah.sch.id           | admin123   |
+| Kepala Sekolah | kepala.sekolah@sekolah.sch.id | kepsek123  |
+| Guru         | budi.santoso@sekolah.sch.id    | guru123    |
+| Siswa        | rina.marlina@student.sch.id    | siswa123   |
 
 ## Struktur Folder
 

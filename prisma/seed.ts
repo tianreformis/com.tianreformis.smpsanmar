@@ -46,6 +46,16 @@ async function main() {
   }
   console.log('Created admin')
 
+  // Create kepala sekolah (master admin)
+  const hashedPasswordKepsek = await bcrypt.hash('kepsek123', 10)
+  const existingKepsek = await prisma.user.findUnique({ where: { email: 'kepala.sekolah@sekolah.sch.id' } })
+  if (!existingKepsek) {
+    await prisma.user.create({
+      data: { email: 'kepala.sekolah@sekolah.sch.id', password: hashedPasswordKepsek, name: 'Dr. Maria Susanti, M.Pd.', role: 'KEPALA_SEKOLAH' }
+    })
+  }
+  console.log('Created kepala sekolah')
+
   // Create default tahun pelajaran
   let tp = await prisma.tahunPelajaran.findFirst({ where: { tahun: '2025/2026' } })
   if (!tp) {

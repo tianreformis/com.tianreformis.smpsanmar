@@ -23,7 +23,7 @@ export interface PaginatedResponse<T> {
   }
 }
 
-export type Role = 'ADMIN' | 'GURU' | 'SISWA'
+export type Role = 'ADMIN' | 'KEPALA_SEKOLAH' | 'GURU' | 'SISWA'
 
 export type JK = 'L' | 'P'
 

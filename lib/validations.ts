@@ -78,7 +78,7 @@ export const userSchema = z.object({
   email: z.string().email({ message: 'Email tidak valid' }),
   password: z.string().min(6, { message: 'Password minimal 6 karakter' }),
   name: z.string().min(2, { message: 'Nama minimal 2 karakter' }),
-  role: z.enum(['ADMIN', 'GURU', 'SISWA']),
+  role: z.enum(['ADMIN', 'KEPALA_SEKOLAH', 'GURU', 'SISWA']),
   siswaId: z.string().optional(),
   guruId: z.string().optional()
 })
