@@ -32,7 +32,7 @@ export const kelasSchema = z.object({
 
 export const mapelSchema = z.object({
   nama_mapel: z.string().min(2, { message: 'Nama mata pelajaran minimal 2 karakter' }),
-  guruId: z.string().optional()
+  kelasId: z.string().min(1, { message: 'Kelas harus dipilih' })
 })
 
 export const jadwalSchema = z.object({
@@ -48,7 +48,14 @@ export const nilaiSchema = z.object({
   siswaId: z.string(),
   mapelId: z.string(),
   nilai: z.number().min(0, { message: 'Nilai minimal 0' }).max(100, { message: 'Nilai maksimal 100' }),
-  semester: z.string()
+  semester: z.enum(['Ganjil', 'Genap']),
+  jenis: z.string().min(1, { message: 'Jenis nilai harus diisi' }),
+  tanggal: z.string().optional()
+})
+
+export const nilaiFilterSchema = z.object({
+  tahunPelajaranId: z.string().min(1, { message: 'Tahun pelajaran harus dipilih' }),
+  semester: z.enum(['Ganjil', 'Genap'])
 })
 
 export const ppdbSchema = z.object({

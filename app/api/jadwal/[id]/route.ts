@@ -30,9 +30,39 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const body = await req.json()
-    const data = jadwalSchema.parse(body)
+    const { tahunPelajaranId, semester, ...rest } = body
+    const data = jadwalSchema.parse(rest)
 
-    const jadwal = await prisma.jadwal.update({ where: { id: params.id }, data })
+    const existingJadwal = await prisma.jadwal.findUnique({
+      where: { id: params.id }
+    })
+    if (!existingJadwal) return NextResponse.json({ error: 'Jadwal tidak ditemukan' }, { status: 404 })
+
+    const tpId = tahunPelajaranId || existingJadwal.tahunPelajaranId
+    const sem = semester || existingJadwal.semester
+
+    const conflict = await prisma.jadwal.findFirst({
+      where: {
+        mapelId: data.mapelId,
+        kelasId: data.kelasId,
+        tahunPelajaranId: tpId,
+        semester: sem,
+        NOT: { id: params.id }
+      },
+      include: { guru: { select: { id: true, nama: true } } }
+    })
+
+    if (conflict) {
+      return NextResponse.json({
+        error: `Mapel ini sudah diampu oleh ${conflict.guru.nama} di kelas ini`
+      }, { status: 409 })
+    }
+
+    const jadwal = await prisma.jadwal.update({
+      where: { id: params.id },
+      data: { ...data, ...(tahunPelajaranId && { tahunPelajaranId: tpId }), ...(semester && { semester: sem }) },
+      include: { kelas: true, mapel: true, guru: true }
+    })
     return NextResponse.json({ data: jadwal })
   } catch (error) {
     console.error('PUT /api/jadwal/[id]:', error)

@@ -12,12 +12,13 @@ import { Badge } from '@/components/ui/badge'
 import { Pencil, Trash2, Plus } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 
-interface Guru { id: string; nama: string }
+interface Kelas { id: string; nama_kelas: string }
 interface Mapel {
   id: string
   nama_mapel: string
   semester: string
-  guru?: Guru
+  kelas?: Kelas
+  tahunPelajaranId: string
 }
 
 interface PaginationState {
@@ -29,7 +30,7 @@ interface PaginationState {
 
 export default function MapelPage() {
   const [data, setData] = useState<Mapel[]>([])
-  const [guru, setGuru] = useState<Guru[]>([])
+  const [kelas, setKelas] = useState<Kelas[]>([])
   const [tahunPelajaran, setTahunPelajaran] = useState<{ id: string; tahun: string }[]>([])
   const [activeTP, setActiveTP] = useState<string>('')
   const [filterTP, setFilterTP] = useState<string>('all')
@@ -38,15 +39,16 @@ export default function MapelPage() {
   const [perPage, setPerPage] = useState(10)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [form, setForm] = useState({ nama_mapel: '', guruId: '', semester: 'Ganjil' })
+  const [form, setForm] = useState({ nama_mapel: '', kelasId: '', semester: 'Ganjil' })
   const [filterSemester, setFilterSemester] = useState('')
+  const [filterKelas, setFilterKelas] = useState<string>('all')
   const semesterOptions = ['Ganjil', 'Genap']
 
   useEffect(() => {
     fetchTahunPelajaran()
   }, [])
 
-  useEffect(() => { fetchData(); fetchGuru() }, [pagination.page, perPage, filterTP, filterSemester])
+  useEffect(() => { fetchData(); fetchKelas() }, [pagination.page, perPage, filterTP, filterSemester, filterKelas])
 
   const fetchData = async () => {
     setLoading(true)
@@ -54,6 +56,7 @@ export default function MapelPage() {
       let url = `/api/mapel?page=${pagination.page}&limit=${perPage}`
       if (filterTP && filterTP !== 'all') url += `&tahunPelajaranId=${filterTP}`
       if (filterSemester) url += `&semester=${filterSemester}`
+      if (filterKelas && filterKelas !== 'all') url += `&kelasId=${filterKelas}`
       const res = await fetch(url)
       const json = await res.json()
       setData(json.data || [])
@@ -62,12 +65,13 @@ export default function MapelPage() {
     finally { setLoading(false) }
   }
 
-  const fetchGuru = async () => {
+  const fetchKelas = async () => {
     try {
-      const res = await fetch('/api/guru?limit=100')
+      const tpParam = filterTP && filterTP !== 'all' ? filterTP : activeTP
+      const res = await fetch(`/api/kelas?limit=100${tpParam ? `&tahunPelajaranId=${tpParam}` : ''}`)
       const json = await res.json()
-      setGuru(json.data)
-    } catch { console.error('Error fetching guru') }
+      setKelas(json.data || [])
+    } catch { console.error('Error fetching kelas') }
   }
 
   const fetchTahunPelajaran = async () => {
@@ -76,7 +80,10 @@ export default function MapelPage() {
       const json = await res.json()
       setTahunPelajaran(json.data || [])
       const active = json.data?.find((tp: any) => tp.isActive)
-      if (active) setActiveTP(active.id)
+      if (active) {
+        setActiveTP(active.id)
+        setFilterTP(active.id)
+      }
     } catch (e) { console.error('Error fetching tahun pelajaran') }
   }
 
@@ -84,9 +91,14 @@ export default function MapelPage() {
     e.preventDefault()
     const url = editingId ? `/api/mapel/${editingId}` : '/api/mapel'
     const method = editingId ? 'PUT' : 'POST'
-    
+    const tpParam = filterTP && filterTP !== 'all' ? filterTP : activeTP
+
     try {
-      const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) })
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...form, tahunPelajaranId: tpParam })
+      })
       const json = await res.json()
       if (res.ok) {
         toast.success(editingId ? 'Berhasil update' : 'Berhasil tambah')
@@ -99,7 +111,7 @@ export default function MapelPage() {
 
   const handleEdit = (mapel: Mapel) => {
     setEditingId(mapel.id)
-    setForm({ nama_mapel: mapel.nama_mapel, guruId: mapel.guru?.id || '', semester: mapel.semester || 'Ganjil' })
+    setForm({ nama_mapel: mapel.nama_mapel, kelasId: mapel.kelas?.id || '', semester: mapel.semester || 'Ganjil' })
     setIsModalOpen(true)
   }
 
@@ -112,7 +124,7 @@ export default function MapelPage() {
     } catch { toast.error('Gagal hapus') }
   }
 
-  const resetForm = () => { setEditingId(null); setForm({ nama_mapel: '', guruId: '', semester: 'Ganjil' }) }
+  const resetForm = () => { setEditingId(null); setForm({ nama_mapel: '', kelasId: '', semester: 'Ganjil' }) }
 
   const handlePerPageChange = (val: string) => {
     const num = parseInt(val)
@@ -125,7 +137,7 @@ export default function MapelPage() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Manajemen Mapel</h2>
-          <p className="text-muted-foreground">Kelola mata pelajaran</p>
+          <p className="text-muted-foreground">Kelola mata pelajaran per kelas</p>
         </div>
         <Button onClick={() => { resetForm(); setIsModalOpen(true) }}>
           <Plus className="h-4 w-4 mr-2" /> Tambah Mapel
@@ -159,6 +171,16 @@ export default function MapelPage() {
             </Select>
           </div>
           <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Kelas:</span>
+            <Select value={filterKelas} onValueChange={(v) => { setFilterKelas(v); setPagination(p => ({ ...p, page: 1 })) }}>
+              <SelectTrigger className="w-32"><SelectValue placeholder="Semua" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Semua</SelectItem>
+                {kelas.map(k => <SelectItem key={k.id} value={k.id}>{k.nama_kelas}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">Semester:</span>
             <Select value={filterSemester || 'all'} onValueChange={(v) => { setFilterSemester(v === 'all' ? '' : v); setPagination(p => ({ ...p, page: 1 })) }}>
               <SelectTrigger className="w-32"><SelectValue placeholder="Semua" /></SelectTrigger>
@@ -177,8 +199,8 @@ export default function MapelPage() {
           <TableRow>
             <TableHead>No</TableHead>
             <TableHead>Mata Pelajaran</TableHead>
+            <TableHead>Kelas</TableHead>
             <TableHead>Semester</TableHead>
-            <TableHead>Guru Pengampu</TableHead>
             <TableHead>Aksi</TableHead>
           </TableRow>
         </TableHeader>
@@ -193,8 +215,8 @@ export default function MapelPage() {
             <TableRow key={mapel.id}>
               <TableCell>{(pagination.page - 1) * pagination.limit + i + 1}</TableCell>
               <TableCell className="font-medium">{mapel.nama_mapel}</TableCell>
+              <TableCell><Badge variant="outline">{mapel.kelas?.nama_kelas || '-'}</Badge></TableCell>
               <TableCell><Badge variant={mapel.semester === 'Ganjil' ? 'default' : 'secondary'}>{mapel.semester}</Badge></TableCell>
-              <TableCell>{mapel.guru?.nama || '-'}</TableCell>
               <TableCell>
                 <div className="flex gap-2">
                   <Button size="icon" variant="ghost" onClick={() => handleEdit(mapel)}><Pencil className="h-4 w-4" /></Button>
@@ -226,32 +248,39 @@ export default function MapelPage() {
         </div>
       )}
 
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+      <Dialog open={isModalOpen} onOpenChange={(open) => { if (!open) { setIsModalOpen(false); resetForm() } }}>
         <DialogContent>
           <DialogHeader><DialogTitle>{editingId ? 'Edit Mapel' : 'Tambah Mapel'}</DialogTitle></DialogHeader>
           <form onSubmit={handleSubmit}>
             <div className="grid gap-4 py-4">
-              <div className="space-y-2"><Label>Mata Pelajaran</Label><Input value={form.nama_mapel} onChange={(e) => setForm({ ...form, nama_mapel: e.target.value })} required /></div>
               <div className="space-y-2">
-                <Label>Semester</Label>
-                <Select value={form.semester} onValueChange={(v) => setForm({ ...form, semester: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Ganjil">Ganjil</SelectItem>
-                    <SelectItem value="Genap">Genap</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label>Mata Pelajaran</Label>
+                <Input value={form.nama_mapel} onChange={(e) => setForm({ ...form, nama_mapel: e.target.value })} placeholder="Contoh: Matematika" required />
               </div>
-              <div className="space-y-2">
-                <Label>Guru Pengampu</Label>
-                <Select value={form.guruId} onValueChange={(v) => setForm({ ...form, guruId: v })}>
-                  <SelectTrigger><SelectValue placeholder="Pilih Guru" /></SelectTrigger>
-                  <SelectContent>{guru.map(g => <SelectItem key={g.id} value={g.id}>{g.nama}</SelectItem>)}</SelectContent>
-                </Select>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Kelas</Label>
+                  <Select value={form.kelasId} onValueChange={(v) => setForm({ ...form, kelasId: v })}>
+                    <SelectTrigger><SelectValue placeholder="Pilih Kelas" /></SelectTrigger>
+                    <SelectContent>
+                      {kelas.map(k => <SelectItem key={k.id} value={k.id}>{k.nama_kelas}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Semester</Label>
+                  <Select value={form.semester} onValueChange={(v) => setForm({ ...form, semester: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Ganjil">Ganjil</SelectItem>
+                      <SelectItem value="Genap">Genap</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>Batal</Button>
+              <Button type="button" variant="outline" onClick={() => { setIsModalOpen(false); resetForm() }}>Batal</Button>
               <Button type="submit">{editingId ? 'Update' : 'Simpan'}</Button>
             </DialogFooter>
           </form>

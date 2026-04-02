@@ -11,7 +11,10 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     const session = await getServerSession(authOptions)
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const mapel = await prisma.mapel.findUnique({ where: { id: params.id }, include: { guru: true } })
+    const mapel = await prisma.mapel.findUnique({
+      where: { id: params.id },
+      include: { kelas: { select: { id: true, nama_kelas: true } } }
+    })
     if (!mapel) return NextResponse.json({ error: 'Mapel not found' }, { status: 404 })
     return NextResponse.json({ data: mapel })
   } catch (error) {
@@ -26,12 +29,32 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const body = await req.json()
-    const { guruId, ...rest } = body
+    const { tahunPelajaranId, semester, ...rest } = body
     const data = mapelSchema.parse(rest)
+
+    const existingMapel = await prisma.mapel.findUnique({
+      where: { id: params.id }
+    })
+    if (!existingMapel) return NextResponse.json({ error: 'Mapel tidak ditemukan' }, { status: 404 })
+
+    const tpId = tahunPelajaranId || existingMapel.tahunPelajaranId
+    const sem = semester || existingMapel.semester
+
+    const conflict = await prisma.mapel.findFirst({
+      where: {
+        nama_mapel: data.nama_mapel,
+        kelasId: data.kelasId,
+        tahunPelajaranId: tpId,
+        semester: sem,
+        NOT: { id: params.id }
+      }
+    })
+    if (conflict) return NextResponse.json({ error: `Mapel "${data.nama_mapel}" sudah ada di kelas ini pada semester ${sem}` }, { status: 400 })
 
     const mapel = await prisma.mapel.update({
       where: { id: params.id },
-      data: { ...data, guruId: guruId || null }
+      data: { ...data, ...(tahunPelajaranId && { tahunPelajaranId: tpId }), ...(semester && { semester: sem }) },
+      include: { kelas: { select: { id: true, nama_kelas: true } } }
     })
     return NextResponse.json({ data: mapel })
   } catch (error) {

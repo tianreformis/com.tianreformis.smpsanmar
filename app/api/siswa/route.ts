@@ -23,6 +23,10 @@ export async function GET(req: Request) {
     if (tahunPelajaranId) {
       where.tahunPelajaranId = tahunPelajaranId
     }
+    const kelasId = searchParams.get('kelasId')
+    if (kelasId) {
+      where.kelasId = kelasId
+    }
 
     const [data, total] = await Promise.all([
       prisma.siswa.findMany({ where, include: { kelas: true, user: { select: { email: true } } }, skip, take: limit, orderBy: { createdAt: 'desc' } }),

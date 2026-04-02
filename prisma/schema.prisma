@@ -71,7 +71,6 @@ model Guru {
   alamat    String
   foto      String?
   kelas     Kelas?   @relation("WaliKelas")
-  mapel     Mapel[]
   jadwal    Jadwal[]
   user      User?
   createdAt DateTime @default(now())
@@ -88,6 +87,7 @@ model Kelas {
   waliKelas         Guru?    @relation("WaliKelas", fields: [waliKelasId], references: [id])
   siswa             Siswa[]
   jadwal            Jadwal[]
+  mapel             Mapel[]
   riwayatKelas      RiwayatKelas[]
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
@@ -99,17 +99,17 @@ model Kelas {
 model Mapel {
   id                String   @id @default(cuid())
   nama_mapel        String
+  kelasId           String
+  kelas             Kelas    @relation(fields: [kelasId], references: [id])
   tahunPelajaranId  String
   tahunPelajaran    TahunPelajaran @relation(fields: [tahunPelajaranId], references: [id])
   semester          String // "Ganjil" or "Genap"
-  guruId            String?
-  guru              Guru?    @relation(fields: [guruId], references: [id])
   nilai             Nilai[]
   jadwal            Jadwal[]
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
-  @@unique([nama_mapel, tahunPelajaranId, semester])
+  @@unique([nama_mapel, kelasId, tahunPelajaranId, semester])
 }
 
 // Jadwal/Schedule
@@ -129,6 +129,8 @@ model Jadwal {
   jam_selesai       String
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
+
+  @@unique([mapelId, kelasId, tahunPelajaranId, semester])
 }
 
 // Nilai/Grade

@@ -22,8 +22,28 @@ export async function GET(req: Request) {
     if (tahunPelajaranId) where.tahunPelajaranId = tahunPelajaranId
     if (semester) where.semester = semester
 
+    if (session.user.role === 'GURU') {
+      const guru = await prisma.guru.findFirst({ where: { user: { id: session.user.id } } })
+      if (guru) {
+        const jadwalMapelIds = (await prisma.jadwal.findMany({
+          where: { guruId: guru.id, tahunPelajaranId: tahunPelajaranId || undefined, semester: semester || undefined },
+          select: { mapelId: true }
+        })).map(j => j.mapelId)
+        if (jadwalMapelIds.length > 0) {
+          where.id = { in: jadwalMapelIds }
+        } else {
+          return NextResponse.json({ data: [], pagination: { total: 0, page, limit, totalPages: 0 } })
+        }
+      }
+    }
+
+    const kelasId = searchParams.get('kelasId')
+    if (kelasId) {
+      where.kelasId = kelasId
+    }
+
     const [data, total] = await Promise.all([
-      prisma.mapel.findMany({ where, include: { guru: true }, skip, take: limit, orderBy: { createdAt: 'desc' } }),
+      prisma.mapel.findMany({ where, include: { kelas: { select: { id: true, nama_kelas: true } } }, skip, take: limit, orderBy: { createdAt: 'desc' } }),
       prisma.mapel.count({ where })
     ])
 
@@ -40,7 +60,7 @@ export async function POST(req: Request) {
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const body = await req.json()
-    const { guruId, tahunPelajaranId, semester, ...rest } = body
+    const { tahunPelajaranId, semester, ...rest } = body
     const data = mapelSchema.parse(rest)
 
     const activeTP = tahunPelajaranId || (await prisma.tahunPelajaran.findFirst({ where: { isActive: true } }))?.id
@@ -48,11 +68,14 @@ export async function POST(req: Request) {
     if (!semester) return NextResponse.json({ error: 'Semester harus dipilih' }, { status: 400 })
 
     const existing = await prisma.mapel.findFirst({
-      where: { nama_mapel: data.nama_mapel, tahunPelajaranId: activeTP, semester }
+      where: { nama_mapel: data.nama_mapel, kelasId: data.kelasId, tahunPelajaranId: activeTP, semester }
     })
-    if (existing) return NextResponse.json({ error: `Mapel "${data.nama_mapel}" sudah ada di semester ${semester}` }, { status: 400 })
+    if (existing) return NextResponse.json({ error: `Mapel "${data.nama_mapel}" sudah ada di kelas ini pada semester ${semester}` }, { status: 400 })
 
-    const mapel = await prisma.mapel.create({ data: { ...data, guruId: guruId || null, tahunPelajaranId: activeTP, semester } })
+    const mapel = await prisma.mapel.create({
+      data: { ...data, tahunPelajaranId: activeTP, semester },
+      include: { kelas: { select: { id: true, nama_kelas: true } } }
+    })
     return NextResponse.json({ data: mapel }, { status: 201 })
   } catch (error) {
     console.error('POST /api/mapel:', error)

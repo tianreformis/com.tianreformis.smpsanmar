@@ -78,14 +78,15 @@ export async function POST(req: Request) {
         }
       }
 
-      // 6. Copy mapel (without guru assignments - to be reassigned)
+      // 6. Copy mapel (with kelas assignments)
       const oldMapel = await tx.mapel.findMany({ where: { tahunPelajaranId: oldTP?.id || '' } })
       for (const mapel of oldMapel) {
         await tx.mapel.create({
           data: {
             nama_mapel: mapel.nama_mapel,
+            kelasId: mapel.kelasId,
             tahunPelajaranId: newTP.id,
-            guruId: null // Guru pengampu perlu ditetapkan ulang
+            semester: mapel.semester
           }
         })
       }

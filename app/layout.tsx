@@ -13,6 +13,9 @@ const firaCode = Fira_Code({ subsets: ['latin'], variable: '--font-fira-code' })
 export const metadata: Metadata = {
   title: 'Sistem Manajemen Sekolah',
   description: 'Sistem Manajemen Sekolah - SMS',
+  icons: {
+    icon: '/icons/favicon-96x96.png',
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

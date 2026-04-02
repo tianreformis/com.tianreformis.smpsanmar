@@ -42,13 +42,14 @@ export async function POST(req: Request) {
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const body = await req.json()
-    const data = kelasSchema.parse(body)
-    const { waliKelasId, tahunPelajaranId, ...rest } = data
+    const { tahunPelajaranId, ...restBody } = body
+    const data = kelasSchema.parse(restBody)
+    const { waliKelasId } = data
 
     const activeTP = tahunPelajaranId || (await prisma.tahunPelajaran.findFirst({ where: { isActive: true } }))?.id
     if (!activeTP) return NextResponse.json({ error: 'Tidak ada tahun pelajaran aktif' }, { status: 400 })
 
-    const kelas = await prisma.kelas.create({ data: { ...rest, waliKelasId: waliKelasId || null, tahunPelajaranId: activeTP } })
+    const kelas = await prisma.kelas.create({ data: { ...data, waliKelasId: waliKelasId || null, tahunPelajaranId: activeTP } })
     return NextResponse.json({ data: kelas }, { status: 201 })
   } catch (error) {
     console.error('POST /api/kelas:', error)

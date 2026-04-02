@@ -52,9 +52,27 @@ export async function POST(req: Request) {
 
     const activeTP = tahunPelajaranId || (await prisma.tahunPelajaran.findFirst({ where: { isActive: true } }))?.id
     if (!activeTP) return NextResponse.json({ error: 'Tidak ada tahun pelajaran aktif' }, { status: 400 })
+    if (!semester) return NextResponse.json({ error: 'Semester harus dipilih' }, { status: 400 })
+
+    const existing = await prisma.jadwal.findFirst({
+      where: {
+        mapelId: data.mapelId,
+        kelasId: data.kelasId,
+        tahunPelajaranId: activeTP,
+        semester
+      },
+      include: { guru: { select: { id: true, nama: true } } }
+    })
+
+    if (existing) {
+      return NextResponse.json({
+        error: `Mapel ini sudah diampu oleh ${existing.guru.nama} di kelas ini`
+      }, { status: 409 })
+    }
 
     const jadwal = await prisma.jadwal.create({
-      data: { ...data, tahunPelajaranId: activeTP, semester: semester || 'Ganjil' }
+      data: { ...data, tahunPelajaranId: activeTP, semester },
+      include: { kelas: true, mapel: true, guru: true }
     })
     return NextResponse.json({ data: jadwal }, { status: 201 })
   } catch (error) {

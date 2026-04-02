@@ -123,30 +123,25 @@ async function main() {
   }
   console.log(`Created ${kelasList.length} kelas`)
 
-  // Create mapel SMP
+  // Create mapel SMP per kelas
   const mapelList = [
-    { nama: 'Matematika', guruIdx: 0 },
-    { nama: 'Bahasa Indonesia', guruIdx: 1 },
-    { nama: 'Bahasa Inggris', guruIdx: 2 },
-    { nama: 'IPA', guruIdx: 3 },
-    { nama: 'IPS', guruIdx: 4 },
-    { nama: 'PKN', guruIdx: 5 },
-    { nama: 'Pendidikan Agama Islam', guruIdx: 6 },
-    { nama: 'Seni Budaya', guruIdx: 7 },
-    { nama: 'PJOK', guruIdx: 8 },
-    { nama: 'Informatika', guruIdx: 0 },
-    { nama: 'Prakarya', guruIdx: 1 },
+    'Matematika', 'Bahasa Indonesia', 'Bahasa Inggris', 'IPA', 'IPS',
+    'PKN', 'Pendidikan Agama Islam', 'Seni Budaya', 'PJOK', 'Informatika', 'Prakarya'
   ]
 
-  const mapelIds: Record<string, string> = {}
-  for (const m of mapelList) {
-    let mapel = await prisma.mapel.findFirst({ where: { nama_mapel: m.nama, tahunPelajaranId: tp.id, semester: 'Ganjil' } })
-    if (!mapel) {
-      mapel = await prisma.mapel.create({ data: { nama_mapel: m.nama, guruId: guruIds[m.guruIdx], tahunPelajaranId: tp.id, semester: 'Ganjil' } })
+  const mapelIds: Record<string, Record<string, string>> = {}
+  for (const kelasNama of Object.keys(kelasMap)) {
+    const kelasId = kelasMap[kelasNama]
+    mapelIds[kelasNama] = {}
+    for (const m of mapelList) {
+      let mapel = await prisma.mapel.findFirst({ where: { nama_mapel: m, kelasId, tahunPelajaranId: tp.id, semester: 'Ganjil' } })
+      if (!mapel) {
+        mapel = await prisma.mapel.create({ data: { nama_mapel: m, kelasId, tahunPelajaranId: tp.id, semester: 'Ganjil' } })
+      }
+      mapelIds[kelasNama][m] = mapel.id
     }
-    mapelIds[m.nama] = mapel.id
   }
-  console.log(`Created ${mapelList.length} mapel`)
+  console.log(`Created ${mapelList.length * Object.keys(kelasMap).length} mapel (${mapelList.length} mapel x ${Object.keys(kelasMap).length} kelas)`)
 
   // Create 120 siswa (20 per kelas)
   let siswaCounter = 0
@@ -197,14 +192,18 @@ async function main() {
   if (!existingNilai) {
     const jenisNilai = ['Tugas 1', 'Tugas 2', 'UH 1', 'UTS', 'UAS']
     for (const siswa of allSiswa) {
+      const siswaKelas = Object.keys(kelasMap).find(k => kelasMap[k] === siswa.kelasId)
+      if (!siswaKelas) continue
       const mapelNames = pickRandom([['Matematika', 'Bahasa Indonesia'], ['Matematika', 'IPA'], ['Bahasa Inggris', 'IPS']])
       for (const mapelName of mapelNames) {
         const semester = pickRandom(['Ganjil', 'Genap'])
         for (const jenis of jenisNilai) {
+          const mapelId = mapelIds[siswaKelas]?.[mapelName]
+          if (!mapelId) continue
           await prisma.nilai.create({
             data: {
               siswaId: siswa.id,
-              mapelId: mapelIds[mapelName],
+              mapelId,
               tahunPelajaranId: tp.id,
               semester,
               jenis,
@@ -230,11 +229,13 @@ async function main() {
       const shuffledMapel = [...mapelList].sort(() => 0.5 - Math.random()).slice(0, 5)
       for (let d = 0; d < 5; d++) {
         const m = shuffledMapel[d]
+        const mapelId = mapelIds[kelasNama]?.[m]
+        if (!mapelId) continue
         await prisma.jadwal.create({
           data: {
             kelasId,
-            mapelId: mapelIds[m.nama],
-            guruId: guruIds[m.guruIdx],
+            mapelId,
+            guruId: guruIds[d % guruIds.length],
             tahunPelajaranId: tp.id,
             semester: 'Ganjil',
             hari: hariList[d],
