@@ -27,6 +27,18 @@ export async function GET(req: Request) {
     if (semester) where.semester = semester
     if (tahunPelajaranId) where.tahunPelajaranId = tahunPelajaranId
 
+    // Role-based filtering
+    if (session.user.role === 'SISWA') {
+      const siswa = await prisma.siswa.findFirst({ where: { user: { id: session.user.id } } })
+      if (!siswa) return NextResponse.json({ data: [], pagination: { total: 0, page, limit, totalPages: 0 } })
+      where.siswaId = siswa.id
+    } else if (session.user.role === 'GURU') {
+      const guru = await prisma.guru.findFirst({ where: { user: { id: session.user.id } } })
+      if (!guru) return NextResponse.json({ data: [], pagination: { total: 0, page, limit, totalPages: 0 } })
+      const mapelIds = (await prisma.mapel.findMany({ where: { guruId: guru.id } })).map(m => m.id)
+      where.mapelId = { in: mapelIds }
+    }
+
     const [data, total] = await Promise.all([
       prisma.nilai.findMany({ where, include: { siswa: true, mapel: true }, skip, take: limit, orderBy: { tanggal: 'desc' } }),
       prisma.nilai.count({ where })
@@ -63,7 +75,15 @@ export async function POST(req: Request) {
       }, { status: 400 })
     }
 
-    // 3. Validate siswa exists for this TP
+    // 3. Guru can only input for their own subjects
+    if (session.user.role === 'GURU') {
+      const guru = await prisma.guru.findFirst({ where: { user: { id: session.user.id } } })
+      if (!guru || mapel.guruId !== guru.id) {
+        return NextResponse.json({ error: 'Anda tidak mengajar mapel ini' }, { status: 403 })
+      }
+    }
+
+    // 4. Validate siswa exists for this TP
     const siswa = await prisma.siswa.findFirst({
       where: { id: data.siswaId, tahunPelajaranId: activeTP }
     })
@@ -73,7 +93,7 @@ export async function POST(req: Request) {
       }, { status: 400 })
     }
 
-    // 4. Check if same jenis already exists for this siswa + mapel + semester
+    // 5. Check if same jenis already exists for this siswa + mapel + semester
     const existing = await prisma.nilai.findFirst({
       where: { siswaId: data.siswaId, mapelId: data.mapelId, semester: data.semester, tahunPelajaranId: activeTP, jenis }
     })
@@ -117,6 +137,20 @@ export async function PUT(req: Request) {
       return NextResponse.json({ error: 'ID dan nilai harus diisi' }, { status: 400 })
     }
 
+    const existingNilai = await prisma.nilai.findUnique({
+      where: { id },
+      include: { mapel: true }
+    })
+    if (!existingNilai) return NextResponse.json({ error: 'Nilai tidak ditemukan' }, { status: 404 })
+
+    // Guru can only edit their own subjects
+    if (session.user.role === 'GURU') {
+      const guru = await prisma.guru.findFirst({ where: { user: { id: session.user.id } } })
+      if (!guru || existingNilai.mapel.guruId !== guru.id) {
+        return NextResponse.json({ error: 'Anda tidak mengajar mapel ini' }, { status: 403 })
+      }
+    }
+
     const updated = await prisma.nilai.update({
       where: { id },
       data: { nilai: newNilai }
@@ -131,13 +165,27 @@ export async function PUT(req: Request) {
 export async function DELETE(req: Request) {
   try {
     const session = await getServerSession(authOptions)
-    if (!session || session.user.role !== 'ADMIN') {
+    if (!session || !['ADMIN', 'GURU'].includes(session.user.role)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const { searchParams } = new URL(req.url)
     const id = searchParams.get('id')
     if (!id) return NextResponse.json({ error: 'ID harus diisi' }, { status: 400 })
+
+    const existingNilai = await prisma.nilai.findUnique({
+      where: { id },
+      include: { mapel: true }
+    })
+    if (!existingNilai) return NextResponse.json({ error: 'Nilai tidak ditemukan' }, { status: 404 })
+
+    // Guru can only delete their own subjects
+    if (session.user.role === 'GURU') {
+      const guru = await prisma.guru.findFirst({ where: { user: { id: session.user.id } } })
+      if (!guru || existingNilai.mapel.guruId !== guru.id) {
+        return NextResponse.json({ error: 'Anda tidak mengajar mapel ini' }, { status: 403 })
+      }
+    }
 
     await prisma.nilai.delete({ where: { id } })
     return NextResponse.json({ message: 'Nilai berhasil dihapus' })

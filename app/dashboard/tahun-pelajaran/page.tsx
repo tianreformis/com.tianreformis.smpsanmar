@@ -299,20 +299,20 @@ export default function TahunPelajaranPage() {
                     }}
                     placeholder="Nama kelas"
                   />
-                  <Select
-                    value={mapping.waliKelasId}
-                    onValueChange={(v) => {
-                      const newMappings = [...kelasMappings]
-                      newMappings[i].waliKelasId = v
-                      setKelasMappings(newMappings)
-                    }}
-                  >
-                    <SelectTrigger className="flex-1"><SelectValue placeholder="Wali Kelas" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">Tanpa Wali Kelas</SelectItem>
-                      {guru.map(g => <SelectItem key={g.id} value={g.id}>{g.nama}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
+                    <Select
+                      value={mapping.waliKelasId || 'none'}
+                      onValueChange={(v) => {
+                        const newMappings = [...kelasMappings]
+                        newMappings[i].waliKelasId = v === 'none' ? '' : v
+                        setKelasMappings(newMappings)
+                      }}
+                    >
+                      <SelectTrigger className="flex-1"><SelectValue placeholder="Wali Kelas" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Tanpa Wali Kelas</SelectItem>
+                        {guru.map(g => <SelectItem key={g.id} value={g.id}>{g.nama}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
                 </div>
               ))}
             </div>
