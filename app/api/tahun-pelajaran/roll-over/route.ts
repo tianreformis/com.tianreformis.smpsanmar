@@ -32,13 +32,13 @@ export async function POST(req: Request) {
       const oldKelas = await tx.kelas.findMany({ where: { tahunPelajaranId: oldTP?.id || '' } })
 
       // 4. Create new classes with mappings
+      // Note: waliKelasId is NOT copied because old kelas records still hold the unique constraint
       const newKelasMap: Record<string, string> = {}
       for (const mapping of kelasMappings) {
         const newKelas = await tx.kelas.create({
           data: {
             nama_kelas: mapping.nama,
-            tahunPelajaranId: newTP.id,
-            waliKelasId: mapping.waliKelasId || null
+            tahunPelajaranId: newTP.id
           }
         })
         newKelasMap[mapping.oldKelasId] = newKelas.id
@@ -78,13 +78,15 @@ export async function POST(req: Request) {
         }
       }
 
-      // 6. Copy mapel (with kelas assignments)
+      // 6. Copy mapel (with new kelas assignments)
       const oldMapel = await tx.mapel.findMany({ where: { tahunPelajaranId: oldTP?.id || '' } })
       for (const mapel of oldMapel) {
+        const newKelasId = newKelasMap[mapel.kelasId]
+        if (!newKelasId) continue
         await tx.mapel.create({
           data: {
             nama_mapel: mapel.nama_mapel,
-            kelasId: mapel.kelasId,
+            kelasId: newKelasId,
             tahunPelajaranId: newTP.id,
             semester: mapel.semester
           }
