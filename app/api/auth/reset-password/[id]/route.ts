@@ -47,11 +47,18 @@ export async function PUT(
       )
     }
 
+    if (!request.userId) {
+      return NextResponse.json(
+        { error: 'User tidak ditemukan untuk request ini' },
+        { status: 400 }
+      )
+    }
+
     const hashedPassword = await bcrypt.hash(newPassword, 10)
 
     await prisma.$transaction([
       prisma.user.update({
-        where: { id: request.userId! },
+        where: { id: request.userId },
         data: { password: hashedPassword }
       }),
       prisma.passwordResetRequest.update({
@@ -68,7 +75,8 @@ export async function PUT(
     return NextResponse.json({
       message: 'Password berhasil direset dan request disetujui'
     })
-  } catch {
+  } catch (error) {
+    console.error('PUT /api/auth/reset-password/[id]:', error)
     return NextResponse.json(
       { error: 'Terjadi kesalahan pada server' },
       { status: 500 }
