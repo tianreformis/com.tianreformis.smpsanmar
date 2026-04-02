@@ -54,7 +54,13 @@ export async function PUT(
       )
     }
 
-    const hashedPassword = await bcrypt.hash(newPassword, 10)
+    const targetUser = await prisma.user.findUnique({ where: { id: request.userId } })
+    if (!targetUser) {
+      return NextResponse.json(
+        { error: 'User yang meminta reset tidak ditemukan' },
+        { status: 400 }
+      )
+    }
 
     const adminUser = await prisma.user.findUnique({ where: { id: session.user.id } })
     if (!adminUser) {
@@ -64,9 +70,11 @@ export async function PUT(
       )
     }
 
+    const hashedPassword = await bcrypt.hash(newPassword, 10)
+
     await prisma.$transaction([
       prisma.user.update({
-        where: { id: request.userId },
+        where: { id: targetUser.id },
         data: { password: hashedPassword }
       }),
       prisma.passwordResetRequest.update({
