@@ -70,7 +70,7 @@ model Guru {
   no_hp     String
   alamat    String
   foto      String?
-  kelas     Kelas?   @relation("WaliKelas")
+  kelasWali Kelas[]  @relation("WaliKelas")
   jadwal    Jadwal[]
   user      User?
   createdAt DateTime @default(now())
@@ -83,8 +83,8 @@ model Kelas {
   nama_kelas        String
   tahunPelajaranId  String
   tahunPelajaran    TahunPelajaran @relation(fields: [tahunPelajaranId], references: [id])
-  waliKelasId       String?  @unique
-  waliKelas         Guru?    @relation("WaliKelas", fields: [waliKelasId], references: [id])
+  waliKelasId       String?
+  waliKelas         Guru?    @relation("WaliKelas", fields: [waliKelasId], references: [id], onDelete: SetNull)
   siswa             Siswa[]
   jadwal            Jadwal[]
   mapel             Mapel[]

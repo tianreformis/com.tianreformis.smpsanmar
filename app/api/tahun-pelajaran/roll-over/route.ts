@@ -17,28 +17,29 @@ export async function POST(req: Request) {
 
     // Start transaction
     const result = await prisma.$transaction(async (tx) => {
-      // 1. Create new tahun pelajaran
+      // 1. Get old active TP BEFORE creating new one
+      const oldTP = await tx.tahunPelajaran.findFirst({ where: { isActive: true } })
+      if (!oldTP) throw new Error('Tidak ada tahun pelajaran aktif')
+
+      // 2. Create new tahun pelajaran
       const newTP = await tx.tahunPelajaran.create({
         data: { tahun: newTahun, isActive: true }
       })
 
-      // 2. Deactivate old active TP
-      const oldTP = await tx.tahunPelajaran.findFirst({ where: { isActive: true } })
-      if (oldTP && oldTP.id !== newTP.id) {
-        await tx.tahunPelajaran.update({ where: { id: oldTP.id }, data: { isActive: false } })
-      }
+      // 3. Deactivate old active TP
+      await tx.tahunPelajaran.update({ where: { id: oldTP.id }, data: { isActive: false } })
 
-      // 3. Get old classes
-      const oldKelas = await tx.kelas.findMany({ where: { tahunPelajaranId: oldTP?.id || '' } })
+      // 4. Get old classes
+      const oldKelas = await tx.kelas.findMany({ where: { tahunPelajaranId: oldTP.id } })
 
-      // 4. Create new classes with mappings
-      // Note: waliKelasId is NOT copied because old kelas records still hold the unique constraint
+      // 5. Create new classes with mappings (copy waliKelasId)
       const newKelasMap: Record<string, string> = {}
       for (const mapping of kelasMappings) {
         const newKelas = await tx.kelas.create({
           data: {
             nama_kelas: mapping.nama,
-            tahunPelajaranId: newTP.id
+            tahunPelajaranId: newTP.id,
+            waliKelasId: mapping.waliKelasId || null
           }
         })
         newKelasMap[mapping.oldKelasId] = newKelas.id
